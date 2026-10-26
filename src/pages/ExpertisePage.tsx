@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ExpertiseSection } from '../components/ExpertiseSection';
+import { LightTunnel } from '../components/LightTunnel';
 import { ShieldCheck, Scale, Compass, Globe, Server, Cpu, CheckCircle } from 'lucide-react';
 
 interface ExpertisePageProps {
@@ -73,7 +74,49 @@ export const ExpertisePage: React.FC<ExpertisePageProps> = ({
   const currentPractice = practices.find((p) => p.num === activeTab) || practices[0];
 
   return (
-    <div className="pt-24 pb-20 bg-[#05070B] min-h-screen text-[#E9EDF3]">
+    <div className="relative min-h-screen text-[#E9EDF3] bg-[#05070B] overflow-hidden">
+      {/* Dynamic LightTunnel WebGL Background */}
+      <div className="fixed inset-0 z-0 pointer-events-auto">
+        <LightTunnel
+          cableColor="#344860"
+          pulseColor="#8CC8D8"
+          tunnelColor="#05070B"
+          tunnelOpacity={0.25}
+          speed={0.12}
+          flowDirection="inward"
+          pulseSpeed={2.2}
+          pulseLength={0.32}
+          pulseBlend={0.6}
+          pulseWidth={1.2}
+          pulseDensity={0.55}
+          cableCount={56}
+          thickness={0.35}
+          rimWidth={0.2}
+          waviness={0.3}
+          sway={0.45}
+          bend={0.38}
+          size={1.05}
+          glow={1.2}
+          fadeNear={0.35}
+          fadeFar={2.2}
+          brightness={1.05}
+          colorVariance={true}
+          grain={true}
+          grainIntensity={0.04}
+          opacity={0.65}
+          mouseInteraction={true}
+          mouseStrength={0.12}
+          clickSurge={true}
+          intro={true}
+        />
+
+        {/* Sophisticated dark gradient vignettes to guarantee text legibility & sovereign atmosphere */}
+        <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-[#05070B]/85 via-[#05070B]/60 to-[#05070B]/90" />
+        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-[#05070B]/35 to-[#05070B]/95" />
+      </div>
+
+      {/* Foreground Content Layer */}
+      <div className="relative z-10 pt-24 pb-20 pointer-events-auto">
       {/* Header */}
       <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-14 py-16 sm:py-24 border-b border-[#DCE4EE]/10">
         <div className="max-w-[840px]">
@@ -190,6 +233,7 @@ export const ExpertisePage: React.FC<ExpertisePageProps> = ({
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

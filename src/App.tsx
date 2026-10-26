@@ -13,10 +13,12 @@ import { AboutPage } from './pages/AboutPage';
 import { ContactSection } from './components/ContactSection';
 import { Footer } from './components/Footer';
 import { BriefingModal } from './components/BriefingModal';
+import { IntroVideo } from './components/IntroVideo';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<string>('home');
   const [briefingModalOpen, setBriefingModalOpen] = useState(false);
+  const [showIntro, setShowIntro] = useState(true);
   const accentColor = '#8CC8D8';
 
   // Handle URL Hash or Path on initial load and popstate
@@ -57,8 +59,15 @@ export default function App() {
     setBriefingModalOpen(false);
   };
 
+  const handleVideoEnd = () => {
+    setShowIntro(false);
+  };
+
   return (
     <div className="min-h-screen bg-[#05070B] text-[#E9EDF3] selection:bg-[#8CC8D8]/20 selection:text-white flex flex-col justify-between">
+      {/* Intro Video */}
+      {showIntro && <IntroVideo onVideoEnd={handleVideoEnd} />}
+
       {/* Top Navbar */}
       <Navbar
         currentPage={currentPage}
