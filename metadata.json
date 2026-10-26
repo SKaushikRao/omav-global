@@ -1,0 +1,6 @@
+{
+  "name": "OMAV Global | Intelligence & Public Systems Transformation",
+  "description": "Transforming governance and public systems through AI-driven intelligence, cybersecurity, legal technology, and strategic public sector partnerships.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

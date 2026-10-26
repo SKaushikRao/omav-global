@@ -1,0 +1,993 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>OMAV Global | Understanding complexity</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+<script src="./assets/3a5160f7ab09423ea3dd7bec68d596c8.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&amp;family=Jost:wght@400;500&amp;family=Tiro+Devanagari+Sanskrit&amp;display=swap">
+<style>
+html{scroll-behavior:smooth}
+body{margin:0;background:#05070B}
+a{color:#E9EDF3}a:hover{color:#FFFFFF}
+.omav{--S:clamp(560px,100vh,1000px)}
+.omav *{box-sizing:border-box}
+.omav-link{display:inline-flex;align-items:center;min-height:44px;color:#AEB7C3;text-decoration:none;transition:color .25s}
+.omav-link:hover{color:#FFFFFF}
+.omav-btn{display:inline-flex;align-items:center;gap:10px;height:48px;padding:0 22px;border-radius:3px;background:#E9EDF3;color:#05070B;text-decoration:none;font-size:14.5px;font-weight:500;letter-spacing:.01em;transition:background .25s}
+.omav-btn:hover{background:#FFFFFF;color:#05070B}
+.omav-btn svg{transition:transform .25s}
+.omav-btn:hover svg{transform:translateX(3px)}
+.omav-ghost{display:inline-flex;align-items:center;gap:10px;height:48px;padding:0 22px;border-radius:3px;border:1px solid rgba(233,237,243,.26);color:#E9EDF3;text-decoration:none;font-size:14.5px;font-weight:500;transition:border-color .25s,background .25s}
+.omav-ghost:hover{border-color:rgba(233,237,243,.7);background:rgba(233,237,243,.04);color:#FFFFFF}
+.omav-row{transition:background .3s}
+.omav-row:hover{background:rgba(220,228,238,.025)}
+@keyframes omavRise{from{opacity:0;transform:translateY(16px);filter:blur(8px)}to{opacity:1;transform:none;filter:none}}
+@keyframes omavCue{0%{transform:scaleX(0);transform-origin:left}45%{transform:scaleX(1);transform-origin:left}55%{transform:scaleX(1);transform-origin:right}100%{transform:scaleX(0);transform-origin:right}}
+.omav-intro .omav-in{opacity:0}
+.omav-intro.omav-go .omav-in{animation:omavRise 1.6s cubic-bezier(.16,.8,.2,1) forwards}
+.omav-intro.omav-go .omav-d1{animation-delay:3.9s}
+.omav-intro.omav-go .omav-d2{animation-delay:4.35s}
+.omav-intro.omav-go .omav-d3{animation-delay:4.9s}
+.omav-intro.omav-go .omav-d4{animation-delay:5.3s}
+.omav-intro.omav-go .omav-d5{animation-delay:5.8s}
+.omav-intro.omav-go .omav-d6{animation-delay:6.6s}
+.omav-cue{display:block;width:40px;height:1px;background:#AEB7C3;animation:omavCue 2.8s ease-in-out infinite}
+@media (max-width:760px){
+.omav [id]{scroll-margin-top:48px}
+.omav-head{background:rgba(5,7,11,.88) !important;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.omav-links{order:3;width:100%;gap:22px !important;font-size:13px !important;overflow-x:auto}
+.omav-hero{align-self:flex-start;padding-top:150px !important}
+.omav-step{align-items:flex-end !important;padding-bottom:8vh}
+.omav-card{background:rgba(5,7,11,.74);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid rgba(220,228,238,.08);border-radius:6px;padding:22px}
+.omav-scrim{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+html{scroll-behavior:auto}
+.omav-intro .omav-in{animation:none;opacity:1}
+.omav-cue{animation:none}
+}
+</style>
+</helmet>
+<div class="omav {{introClass}}" style="background: #05070B; color: #E9EDF3; font-family: Geist, Inter, system-ui, -apple-system, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; overflow-x: clip">
+
+<header class="omav-head omav-in omav-d5" style="position: fixed; top: 0; left: 0; right: 0; z-index: 20; background: linear-gradient(to bottom, rgba(5,7,11,0.82), rgba(5,7,11,0))">
+<div style="max-width: 1440px; margin: 0 auto; padding: 16px clamp(20px, 4vw, 56px); display: flex; align-items: center; justify-content: space-between; gap: 8px 24px; flex-wrap: wrap">
+<a href="#top" aria-label="OMAV Global home" style="display: flex; align-items: center; gap: 12px; text-decoration: none; color: #E9EDF3; min-height: 44px">
+<svg viewBox="-150 -104 300 218" width="46" height="34" aria-hidden="true">
+<defs><clipPath id="omavDiscNav"><circle cx="0" cy="0" r="100"></circle></clipPath></defs>
+<g style="clip-path: url(#omavDiscNav)">
+<rect x="-100" y="-100" width="200" height="23.5" fill="#A9B2BE"></rect>
+<rect x="-100" y="-74.3" width="200" height="29.8" fill="#A9B2BE"></rect>
+<rect x="-100" y="-42.3" width="200" height="24.3" fill="#A9B2BE"></rect>
+<rect x="-100" y="-15.8" width="200" height="19.8" fill="#A9B2BE"></rect>
+<rect x="-100" y="6.2" width="200" height="15.8" fill="#A9B2BE"></rect>
+<rect x="-100" y="24.2" width="200" height="11.8" fill="#A9B2BE"></rect>
+<rect x="-100" y="38.2" width="200" height="8.3" fill="#A9B2BE"></rect>
+<rect x="-100" y="48.7" width="200" height="6.3" fill="#A9B2BE"></rect>
+<rect x="-100" y="57.2" width="200" height="42.8" fill="#626B79"></rect>
+</g>
+<circle cx="0" cy="0" r="20" fill="#2B2E6E" stroke="#E4E8EE" style="stroke-width: 3"></circle>
+<path d="M -143 25 C -128 12 -108 6 -88 6 C -58 6 -22 30 0 57 C 22 30 58 6 88 6 C 108 6 128 12 143 25 C 126 22 108 25 92 27 C 60 31 28 52 7.5 80 L -7.5 80 C -28 52 -60 31 -92 27 C -108 25 -126 22 -143 25 Z" fill="#4A5260" transform="translate(0 4.5)"></path>
+<path d="M -143 25 C -128 12 -108 6 -88 6 C -58 6 -22 30 0 57 C 22 30 58 6 88 6 C 108 6 128 12 143 25 C 126 22 108 25 92 27 C 60 31 28 52 7.5 80 L -7.5 80 C -28 52 -60 31 -92 27 C -108 25 -126 22 -143 25 Z" fill="#DDE2E9" stroke="#05070B" style="stroke-width: 2.5"></path>
+<rect x="-7.5" y="79" width="15" height="5" fill="#DDE2E9"></rect>
+<path d="M -6 84 L 6 84 L 0 99 Z" fill="#DDE2E9"></path>
+<circle cx="0" cy="88.6" r="1.8" fill="#05070B"></circle>
+<circle cx="0" cy="107" r="2.6" fill="#DDE2E9"></circle>
+</svg>
+<span style="display: flex; flex-direction: column; line-height: 1">
+<span style="font-family: Jost, Futura, 'Century Gothic', sans-serif; font-weight: 500; font-size: 19px; letter-spacing: 0.16em">OMAV</span>
+<span style="font-size: 9.5px; letter-spacing: 0.44em; color: #9AA4B2; margin-top: 5px; font-weight: 500">GLOBAL</span>
+</span>
+</a>
+<nav class="omav-links" aria-label="Primary" style="display: flex; align-items: center; gap: 36px; font-size: 14px; white-space: nowrap">
+<a class="omav-link" href="#expertise">Expertise</a>
+<a class="omav-link" href="#approach">Approach</a>
+<a class="omav-link" href="#insights">Insights</a>
+<a class="omav-link" href="#about">About</a>
+</nav>
+<a class="omav-ghost" href="#contact" style="height: 44px; padding: 0 18px; font-size: 14px">Contact</a>
+</div>
+</header>
+
+<section id="top" ref="{{storyRef}}" style="position: relative">
+<div ref="{{stageRef}}" style="position: sticky; top: 0; height: var(--S); overflow: hidden; z-index: 0; background: #05070B">
+<canvas ref="{{canvasRef}}" aria-hidden="true" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; touch-action: pan-y; cursor: grab"></canvas>
+<div class="omav-scrim" aria-hidden="true" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; background: linear-gradient(90deg, rgba(5,7,11,0.7) 0%, rgba(5,7,11,0.32) 34%, rgba(5,7,11,0) 54%)"></div>
+<div aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 20%; pointer-events: none; background: linear-gradient(to top, #05070B, rgba(5,7,11,0))"></div>
+</div>
+
+<div style="position: relative; z-index: 1; margin-top: calc(var(--S) * -1); pointer-events: none">
+
+<div style="height: var(--S); position: relative; display: flex; align-items: center">
+<div class="omav-hero" style="width: 100%; max-width: 1440px; margin: 0 auto; padding: 88px clamp(20px, 4vw, 56px) 0">
+<div style="max-width: 760px; pointer-events: auto">
+<div class="omav-in omav-d1" style="display: flex; align-items: center; gap: 14px; margin-bottom: 30px">
+<span style="display: block; width: 28px; height: 1px; background: {{accent}}"></span>
+<span style="font-size: 12px; letter-spacing: 0.34em; color: #9AA4B2; font-weight: 500">OMAV GLOBAL</span>
+</div>
+<h1 style="margin: 0; font-weight: 500; font-size: clamp(38px, 3.9vw, 64px); line-height: 1.04; letter-spacing: -0.035em">
+<span class="omav-in omav-d1" style="display: block; color: #F2F5F9">Understanding complexity.</span>
+<span class="omav-in omav-d2" style="display: block; color: #8E99A8">Shaping what comes next.</span>
+</h1>
+<div class="omav-in omav-d3" style="margin-top: 38px; padding-top: 22px; border-top: 1px solid rgba(220,228,238,0.14); max-width: 520px; font-size: 14px; letter-spacing: 0.08em; color: #AEB7C3">Intelligence. Technology. Policy. Global Strategy.</div>
+<div class="omav-in omav-d4" style="margin-top: 40px; display: flex; flex-wrap: wrap; gap: 12px">
+<a class="omav-btn" href="#how">Explore OMAV <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M1 7h11M8 3l4 4-4 4" stroke="currentColor" style="stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round"></path></svg></a>
+<a class="omav-ghost" href="#contact">Contact</a>
+</div>
+</div>
+</div>
+<div class="omav-in omav-d6" aria-hidden="true" style="position: absolute; left: max(clamp(20px, 4vw, 56px), calc((100% - 1440px) / 2 + 56px)); bottom: 36px; display: flex; align-items: center; gap: 14px; font-size: 11px; letter-spacing: 0.3em; color: #8C96A6">
+<span class="omav-cue"></span>
+<span>SCROLL TO EXPLORE</span>
+</div>
+</div>
+
+<div id="how" style="min-height: calc(var(--S) * 0.55); display: flex; align-items: center">
+<div style="width: 100%; max-width: 1440px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 56px)">
+<div class="omav-card" style="max-width: 500px; pointer-events: auto">
+<div style="display: flex; align-items: center; gap: 14px; font-size: 12px; letter-spacing: 0.3em; color: #9AA4B2; font-weight: 500">
+<span style="display: block; width: 28px; height: 1px; background: {{accent}}"></span>
+<span>HOW WE THINK</span>
+</div>
+<h2 style="margin: 22px 0 0; font-size: clamp(30px, 3.2vw, 46px); font-weight: 500; letter-spacing: -0.03em; line-height: 1.1">From scattered signals to decisions that hold.</h2>
+</div>
+</div>
+</div>
+
+<div id="data" class="omav-step" style="min-height: calc(var(--S) * 0.8); display: flex; align-items: center">
+<div style="width: 100%; max-width: 1440px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 56px)">
+<div class="omav-card" style="max-width: 440px; pointer-events: auto">
+<div style="display: flex; gap: 10px; font-size: 12px; letter-spacing: 0.24em; color: #8C96A6"><span style="color: {{accent}}">01</span><span>/ 05</span></div>
+<h3 style="margin: 18px 0 0; font-size: clamp(38px, 4.2vw, 60px); font-weight: 500; letter-spacing: -0.035em; line-height: 1">Data</h3>
+<p style="margin: 22px 0 0; font-size: 17px; line-height: 1.6; color: #AEB7C3">The world produces more information than any institution can read. We begin with what is openly knowable: law, policy, research, markets and public sources.</p>
+</div>
+</div>
+</div>
+
+<div class="omav-step" style="min-height: calc(var(--S) * 0.8); display: flex; align-items: center">
+<div style="width: 100%; max-width: 1440px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 56px)">
+<div class="omav-card" style="max-width: 440px; pointer-events: auto">
+<div style="display: flex; gap: 10px; font-size: 12px; letter-spacing: 0.24em; color: #8C96A6"><span style="color: {{accent}}">02</span><span>/ 05</span></div>
+<h3 style="margin: 18px 0 0; font-size: clamp(38px, 4.2vw, 60px); font-weight: 500; letter-spacing: -0.035em; line-height: 1">Intelligence</h3>
+<p style="margin: 22px 0 0; font-size: 17px; line-height: 1.6; color: #AEB7C3">We connect it. Patterns, actors and dependencies emerge when information is read across disciplines rather than within them.</p>
+</div>
+</div>
+</div>
+
+<div class="omav-step" style="min-height: calc(var(--S) * 0.8); display: flex; align-items: center">
+<div style="width: 100%; max-width: 1440px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 56px)">
+<div class="omav-card" style="max-width: 440px; pointer-events: auto">
+<div style="display: flex; gap: 10px; font-size: 12px; letter-spacing: 0.24em; color: #8C96A6"><span style="color: {{accent}}">03</span><span>/ 05</span></div>
+<h3 style="margin: 18px 0 0; font-size: clamp(38px, 4.2vw, 60px); font-weight: 500; letter-spacing: -0.035em; line-height: 1">Understanding</h3>
+<p style="margin: 22px 0 0; font-size: 17px; line-height: 1.6; color: #AEB7C3">We interpret it through the lenses of law, technology and governance, until the picture is clear enough to act on.</p>
+</div>
+</div>
+</div>
+
+<div class="omav-step" style="min-height: calc(var(--S) * 0.8); display: flex; align-items: center">
+<div style="width: 100%; max-width: 1440px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 56px)">
+<div class="omav-card" style="max-width: 440px; pointer-events: auto">
+<div style="display: flex; gap: 10px; font-size: 12px; letter-spacing: 0.24em; color: #8C96A6"><span style="color: {{accent}}">04</span><span>/ 05</span></div>
+<h3 style="margin: 18px 0 0; font-size: clamp(38px, 4.2vw, 60px); font-weight: 500; letter-spacing: -0.035em; line-height: 1">Strategy</h3>
+<p style="margin: 22px 0 0; font-size: 17px; line-height: 1.6; color: #AEB7C3">We turn understanding into direction: policy positions, governance frameworks, partnerships and programmes with a clear line of sight to outcomes.</p>
+</div>
+</div>
+</div>
+
+<div class="omav-step" style="min-height: calc(var(--S) * 0.8); display: flex; align-items: center">
+<div style="width: 100%; max-width: 1440px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 56px)">
+<div class="omav-card" style="max-width: 440px; pointer-events: auto">
+<div style="display: flex; gap: 10px; font-size: 12px; letter-spacing: 0.24em; color: #8C96A6"><span style="color: {{accent}}">05</span><span>/ 05</span></div>
+<h3 style="margin: 18px 0 0; font-size: clamp(38px, 4.2vw, 60px); font-weight: 500; letter-spacing: -0.035em; line-height: 1">Impact</h3>
+<p style="margin: 22px 0 0; font-size: 17px; line-height: 1.6; color: #AEB7C3">And we stay through delivery, because advice only matters when it changes what happens next.</p>
+</div>
+</div>
+</div>
+
+<div style="height: calc(var(--S) * 0.45)"></div>
+</div>
+</section>
+
+<section id="expertise" style="position: relative; z-index: 2; background: #05070B; padding: clamp(96px, 11vw, 168px) 0; border-top: 1px solid rgba(220,228,238,0.08)">
+<div style="max-width: 1440px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 56px)">
+<div style="display: flex; flex-wrap: wrap; gap: 28px 64px; align-items: flex-end; justify-content: space-between; margin-bottom: clamp(48px, 6vw, 80px)">
+<div style="flex: 1 1 440px; max-width: 760px">
+<div style="display: flex; align-items: center; gap: 14px; font-size: 12px; letter-spacing: 0.3em; color: #9AA4B2; font-weight: 500"><span style="display: block; width: 28px; height: 1px; background: {{accent}}"></span><span>EXPERTISE</span></div>
+<h2 style="margin: 22px 0 0; font-size: clamp(30px, 3.4vw, 50px); font-weight: 500; letter-spacing: -0.03em; line-height: 1.1">A multidisciplinary practice where law, technology and public policy meet.</h2>
+</div>
+<p style="flex: 0 1 400px; margin: 0; font-size: 17px; line-height: 1.6; color: #9AA4B2">The questions that matter rarely sit within one discipline. A technology decision is often a legal one; a policy choice can carry global consequences.</p>
+</div>
+
+<div style="border-bottom: 1px solid rgba(220,228,238,0.1)">
+<div class="omav-row" style="display: flex; flex-wrap: wrap; gap: 10px 40px; padding: 30px 0; border-top: 1px solid rgba(220,228,238,0.1); align-items: baseline">
+<span style="flex: 0 0 48px; font-size: 13px; letter-spacing: 0.12em; color: {{accent}}">01</span>
+<h3 style="flex: 1 1 300px; margin: 0; font-size: clamp(21px, 1.8vw, 26px); font-weight: 500; letter-spacing: -0.015em">Strategic intelligence &amp; research</h3>
+<p style="flex: 1.3 1 360px; margin: 0; font-size: 16px; line-height: 1.6; color: #9AA4B2">Rigorous open-source research and analysis that turns scattered information into a clear picture of risks, actors and opportunities.</p>
+</div>
+<div class="omav-row" style="display: flex; flex-wrap: wrap; gap: 10px 40px; padding: 30px 0; border-top: 1px solid rgba(220,228,238,0.1); align-items: baseline">
+<span style="flex: 0 0 48px; font-size: 13px; letter-spacing: 0.12em; color: {{accent}}">02</span>
+<h3 style="flex: 1 1 300px; margin: 0; font-size: clamp(21px, 1.8vw, 26px); font-weight: 500; letter-spacing: -0.015em">AI governance &amp; responsible innovation</h3>
+<p style="flex: 1.3 1 360px; margin: 0; font-size: 16px; line-height: 1.6; color: #9AA4B2">Policies, frameworks and oversight that let institutions adopt AI with accountability, legality and public trust built in.</p>
+</div>
+<div class="omav-row" style="display: flex; flex-wrap: wrap; gap: 10px 40px; padding: 30px 0; border-top: 1px solid rgba(220,228,238,0.1); align-items: baseline">
+<span style="flex: 0 0 48px; font-size: 13px; letter-spacing: 0.12em; color: {{accent}}">03</span>
+<h3 style="flex: 1 1 300px; margin: 0; font-size: clamp(21px, 1.8vw, 26px); font-weight: 500; letter-spacing: -0.015em">Cyber &amp; digital-law advisory</h3>
+<p style="flex: 1.3 1 360px; margin: 0; font-size: 16px; line-height: 1.6; color: #9AA4B2">Counsel where technology meets law: cybercrime and cyber resilience, data protection and emerging digital regulation.</p>
+</div>
+<div class="omav-row" style="display: flex; flex-wrap: wrap; gap: 10px 40px; padding: 30px 0; border-top: 1px solid rgba(220,228,238,0.1); align-items: baseline">
+<span style="flex: 0 0 48px; font-size: 13px; letter-spacing: 0.12em; color: {{accent}}">04</span>
+<h3 style="flex: 1 1 300px; margin: 0; font-size: clamp(21px, 1.8vw, 26px); font-weight: 500; letter-spacing: -0.015em">Public-sector strategy</h3>
+<p style="flex: 1.3 1 360px; margin: 0; font-size: 16px; line-height: 1.6; color: #9AA4B2">Helping government bodies define problems precisely and deliver technology-led programmes that work in practice.</p>
+</div>
+<div class="omav-row" style="display: flex; flex-wrap: wrap; gap: 10px 40px; padding: 30px 0; border-top: 1px solid rgba(220,228,238,0.1); align-items: baseline">
+<span style="flex: 0 0 48px; font-size: 13px; letter-spacing: 0.12em; color: {{accent}}">05</span>
+<h3 style="flex: 1 1 300px; margin: 0; font-size: clamp(21px, 1.8vw, 26px); font-weight: 500; letter-spacing: -0.015em">International partnerships</h3>
+<p style="flex: 1.3 1 360px; margin: 0; font-size: 16px; line-height: 1.6; color: #9AA4B2">Structuring collaboration between governments, institutions and research bodies across borders and sectors.</p>
+</div>
+<div class="omav-row" style="display: flex; flex-wrap: wrap; gap: 10px 40px; padding: 30px 0; border-top: 1px solid rgba(220,228,238,0.1); align-items: baseline">
+<span style="flex: 0 0 48px; font-size: 13px; letter-spacing: 0.12em; color: {{accent}}">06</span>
+<h3 style="flex: 1 1 300px; margin: 0; font-size: clamp(21px, 1.8vw, 26px); font-weight: 500; letter-spacing: -0.015em">Policy-led technology transformation</h3>
+<p style="flex: 1.3 1 360px; margin: 0; font-size: 16px; line-height: 1.6; color: #9AA4B2">Aligning technology adoption with policy objectives, so that systems serve their public purpose and stand up to scrutiny.</p>
+</div>
+</div>
+</div>
+</section>
+
+<section id="approach" style="position: relative; z-index: 2; background: #080B11; padding: clamp(96px, 11vw, 168px) 0; border-top: 1px solid rgba(220,228,238,0.06)">
+<div style="max-width: 1440px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 56px)">
+<div style="max-width: 760px; margin-bottom: clamp(48px, 6vw, 88px)">
+<div style="display: flex; align-items: center; gap: 14px; font-size: 12px; letter-spacing: 0.3em; color: #9AA4B2; font-weight: 500"><span style="display: block; width: 28px; height: 1px; background: {{accent}}"></span><span>APPROACH</span></div>
+<h2 style="margin: 22px 0 0; font-size: clamp(30px, 3.4vw, 50px); font-weight: 500; letter-spacing: -0.03em; line-height: 1.1">Four commitments behind every engagement.</h2>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 48px 40px">
+<div style="flex: 1 1 240px; border-top: 1px solid rgba(220,228,238,0.16); padding-top: 28px">
+<div style="font-size: 13px; letter-spacing: 0.12em; color: {{accent}}">01</div>
+<h3 style="margin: 40px 0 0; font-size: 22px; font-weight: 500; letter-spacing: -0.01em">Intelligence</h3>
+<p style="margin: 14px 0 0; font-size: 16px; line-height: 1.6; color: #9AA4B2">We understand complex information, technology, emerging risks and the world around us.</p>
+</div>
+<div style="flex: 1 1 240px; border-top: 1px solid rgba(220,228,238,0.16); padding-top: 28px">
+<div style="font-size: 13px; letter-spacing: 0.12em; color: {{accent}}">02</div>
+<h3 style="margin: 40px 0 0; font-size: 22px; font-weight: 500; letter-spacing: -0.01em">Advisory</h3>
+<p style="margin: 14px 0 0; font-size: 16px; line-height: 1.6; color: #9AA4B2">We translate intelligence into decisions, policy, partnerships and strategic outcomes.</p>
+</div>
+<div style="flex: 1 1 240px; border-top: 1px solid rgba(220,228,238,0.16); padding-top: 28px">
+<div style="font-size: 13px; letter-spacing: 0.12em; color: {{accent}}">03</div>
+<h3 style="margin: 40px 0 0; font-size: 22px; font-weight: 500; letter-spacing: -0.01em">Global perspective</h3>
+<p style="margin: 14px 0 0; font-size: 16px; line-height: 1.6; color: #9AA4B2">Our thinking extends beyond countries, sectors and conventional boundaries.</p>
+</div>
+<div style="flex: 1 1 240px; border-top: 1px solid rgba(220,228,238,0.16); padding-top: 28px">
+<div style="font-size: 13px; letter-spacing: 0.12em; color: {{accent}}">04</div>
+<h3 style="margin: 40px 0 0; font-size: 22px; font-weight: 500; letter-spacing: -0.01em">Institutional credibility</h3>
+<p style="margin: 14px 0 0; font-size: 16px; line-height: 1.6; color: #9AA4B2">We approach important work with precision, discretion and seriousness.</p>
+</div>
+</div>
+</div>
+</section>
+
+<section id="insights" style="position: relative; z-index: 2; background: #05070B; padding: clamp(96px, 11vw, 168px) 0; border-top: 1px solid rgba(220,228,238,0.06)">
+<div style="max-width: 1440px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 56px)">
+<div style="display: flex; flex-wrap: wrap; gap: 28px 64px; align-items: flex-end; justify-content: space-between; margin-bottom: clamp(48px, 6vw, 80px)">
+<div style="flex: 1 1 440px; max-width: 760px">
+<div style="display: flex; align-items: center; gap: 14px; font-size: 12px; letter-spacing: 0.3em; color: #9AA4B2; font-weight: 500"><span style="display: block; width: 28px; height: 1px; background: {{accent}}"></span><span>INSIGHTS</span></div>
+<h2 style="margin: 22px 0 0; font-size: clamp(30px, 3.4vw, 50px); font-weight: 500; letter-spacing: -0.03em; line-height: 1.1">Analysis for decision-makers.</h2>
+</div>
+<p style="flex: 0 1 400px; margin: 0; font-size: 17px; line-height: 1.6; color: #9AA4B2">Briefings on AI governance, cyber law and technology policy. Our first publications are in preparation.</p>
+</div>
+<div style="border-bottom: 1px solid rgba(220,228,238,0.1)">
+<div class="omav-row" style="display: flex; flex-wrap: wrap; gap: 10px 40px; padding: 28px 0; border-top: 1px solid rgba(220,228,238,0.1); align-items: center">
+<span style="flex: 0 0 200px; font-size: 12px; letter-spacing: 0.2em; color: #8C96A6">AI GOVERNANCE</span>
+<h3 style="flex: 1 1 380px; margin: 0; font-size: clamp(20px, 1.7vw, 24px); font-weight: 500; letter-spacing: -0.01em">Accountable AI in public institutions</h3>
+<span style="flex: 0 0 auto; font-size: 12px; letter-spacing: 0.14em; color: #9AA4B2; border: 1px solid rgba(220,228,238,0.18); border-radius: 999px; padding: 6px 12px">FORTHCOMING</span>
+</div>
+<div class="omav-row" style="display: flex; flex-wrap: wrap; gap: 10px 40px; padding: 28px 0; border-top: 1px solid rgba(220,228,238,0.1); align-items: center">
+<span style="flex: 0 0 200px; font-size: 12px; letter-spacing: 0.2em; color: #8C96A6">CYBER &amp; LAW</span>
+<h3 style="flex: 1 1 380px; margin: 0; font-size: clamp(20px, 1.7vw, 24px); font-weight: 500; letter-spacing: -0.01em">Cyber resilience and the rule of law</h3>
+<span style="flex: 0 0 auto; font-size: 12px; letter-spacing: 0.14em; color: #9AA4B2; border: 1px solid rgba(220,228,238,0.18); border-radius: 999px; padding: 6px 12px">FORTHCOMING</span>
+</div>
+<div class="omav-row" style="display: flex; flex-wrap: wrap; gap: 10px 40px; padding: 28px 0; border-top: 1px solid rgba(220,228,238,0.1); align-items: center">
+<span style="flex: 0 0 200px; font-size: 12px; letter-spacing: 0.2em; color: #8C96A6">GLOBAL STRATEGY</span>
+<h3 style="flex: 1 1 380px; margin: 0; font-size: clamp(20px, 1.7vw, 24px); font-weight: 500; letter-spacing: -0.01em">Technology, policy and multilateral cooperation</h3>
+<span style="flex: 0 0 auto; font-size: 12px; letter-spacing: 0.14em; color: #9AA4B2; border: 1px solid rgba(220,228,238,0.18); border-radius: 999px; padding: 6px 12px">FORTHCOMING</span>
+</div>
+</div>
+<div style="margin-top: 40px">
+<a class="omav-ghost" href="#contact">Request a briefing <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M1 7h11M8 3l4 4-4 4" stroke="currentColor" style="stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round"></path></svg></a>
+</div>
+</div>
+</section>
+
+<section id="about" style="position: relative; z-index: 2; background: #080B11; padding: clamp(96px, 11vw, 168px) 0; border-top: 1px solid rgba(220,228,238,0.06)">
+<div style="max-width: 1440px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 56px); display: flex; flex-wrap: wrap; gap: 64px clamp(40px, 6vw, 120px); align-items: stretch">
+<div style="flex: 1.4 1 460px">
+<div style="display: flex; align-items: center; gap: 14px; font-size: 12px; letter-spacing: 0.3em; color: #9AA4B2; font-weight: 500"><span style="display: block; width: 28px; height: 1px; background: {{accent}}"></span><span>ABOUT</span></div>
+<h2 style="margin: 22px 0 0; font-size: clamp(30px, 3.4vw, 50px); font-weight: 500; letter-spacing: -0.03em; line-height: 1.1">Advice for institutions working where technology, law and public purpose meet.</h2>
+<p style="margin: 28px 0 0; max-width: 620px; font-size: 17px; line-height: 1.65; color: #9AA4B2">OMAV Global Consultancy Services is a multidisciplinary advisory practice. We bring legal rigour, technological fluency and an international outlook to the questions government bodies, enterprises and research institutions find hardest to answer.</p>
+</div>
+<div style="flex: 1 1 340px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border: 1px solid rgba(220,228,238,0.1); border-radius: 4px; padding: clamp(40px, 5vw, 72px) 32px; background: #05070B">
+<svg viewBox="-150 -104 300 218" width="220" height="160" role="img" aria-label="The OMAV mark">
+<defs><clipPath id="omavDiscAbout"><circle cx="0" cy="0" r="100"></circle></clipPath></defs>
+<g style="clip-path: url(#omavDiscAbout)">
+<rect x="-100" y="-100" width="200" height="23.5" fill="#A9B2BE"></rect>
+<rect x="-100" y="-74.3" width="200" height="29.8" fill="#A9B2BE"></rect>
+<rect x="-100" y="-42.3" width="200" height="24.3" fill="#A9B2BE"></rect>
+<rect x="-100" y="-15.8" width="200" height="19.8" fill="#A9B2BE"></rect>
+<rect x="-100" y="6.2" width="200" height="15.8" fill="#A9B2BE"></rect>
+<rect x="-100" y="24.2" width="200" height="11.8" fill="#A9B2BE"></rect>
+<rect x="-100" y="38.2" width="200" height="8.3" fill="#A9B2BE"></rect>
+<rect x="-100" y="48.7" width="200" height="6.3" fill="#A9B2BE"></rect>
+<rect x="-100" y="57.2" width="200" height="42.8" fill="#626B79"></rect>
+</g>
+<circle cx="0" cy="0" r="20" fill="#2B2E6E" stroke="#E4E8EE" style="stroke-width: 2.4"></circle>
+<path d="M -143 25 C -128 12 -108 6 -88 6 C -58 6 -22 30 0 57 C 22 30 58 6 88 6 C 108 6 128 12 143 25 C 126 22 108 25 92 27 C 60 31 28 52 7.5 80 L -7.5 80 C -28 52 -60 31 -92 27 C -108 25 -126 22 -143 25 Z" fill="#4A5260" transform="translate(0 4.5)"></path>
+<path d="M -143 25 C -128 12 -108 6 -88 6 C -58 6 -22 30 0 57 C 22 30 58 6 88 6 C 108 6 128 12 143 25 C 126 22 108 25 92 27 C 60 31 28 52 7.5 80 L -7.5 80 C -28 52 -60 31 -92 27 C -108 25 -126 22 -143 25 Z" fill="#DDE2E9" stroke="#05070B" style="stroke-width: 2"></path>
+<rect x="-7.5" y="79" width="15" height="5" fill="#DDE2E9"></rect>
+<path d="M -6 84 L 6 84 L 0 99 Z" fill="#DDE2E9"></path>
+<circle cx="0" cy="88.6" r="1.7" fill="#05070B"></circle>
+<path d="M 0 90.5 L 0 99" stroke="#05070B" style="stroke-width: 0.9"></path>
+<circle cx="0" cy="107" r="2.4" fill="#DDE2E9"></circle>
+</svg>
+<div style="margin-top: 26px; font-family: Jost, Futura, 'Century Gothic', sans-serif; font-weight: 500; font-size: 30px; letter-spacing: 0.16em">OMAV</div>
+<div lang="sa" style="margin-top: 14px; font-family: 'Tiro Devanagari Sanskrit', 'Noto Serif Devanagari', serif; font-size: clamp(24px, 2.2vw, 32px); color: #DCE3EB">॥ अधिकाराणां कृते ॥</div>
+<div style="margin-top: 10px; font-size: 15px; color: #AEB7C3">For the sake of rights</div>
+<div style="margin-top: 26px; width: 28px; height: 1px; background: {{accent}}"></div>
+<p style="margin: 22px 0 0; max-width: 300px; font-size: 14px; line-height: 1.6; color: #8C96A6">The principle at the centre of our mark.</p>
+</div>
+</div>
+<div style="max-width: 1440px; margin: clamp(80px, 9vw, 128px) auto 0; padding: 0 clamp(20px, 4vw, 56px)">
+<div style="display: flex; align-items: center; gap: 14px; font-size: 12px; letter-spacing: 0.3em; color: #9AA4B2; font-weight: 500"><span style="display: block; width: 28px; height: 1px; background: {{accent}}"></span><span>FOUNDERS</span></div>
+<p style="margin: 22px 0 0; max-width: 880px; font-size: clamp(24px, 2.4vw, 34px); font-weight: 500; line-height: 1.25; letter-spacing: -0.02em; color: #E9EDF3">Priya Lalwani and Varad Ozarkar co-founded OMAV Global to bring strategy, technology and governance to the institutions shaping what comes next.</p>
+<div style="margin-top: 48px; border-bottom: 1px solid rgba(220,228,238,0.1)">
+<div style="display: flex; flex-wrap: wrap; gap: 18px 64px; padding: 44px 0; border-top: 1px solid rgba(220,228,238,0.1)">
+<div style="flex: 0 1 360px">
+<h3 style="margin: 0; font-size: clamp(26px, 2.2vw, 32px); font-weight: 500; letter-spacing: -0.02em">Priya Lalwani</h3>
+<div style="margin-top: 8px; font-size: 15px; line-height: 1.5; color: #AEB7C3">Co-founder</div>
+<div style="margin-top: 16px; font-size: 12px; letter-spacing: 0.18em; line-height: 1.7; color: {{accent}}">STRATEGY · PUBLIC-SECTOR TRANSFORMATION · OPERATIONS</div>
+</div>
+<div style="flex: 1 1 480px; max-width: 780px">
+<p style="margin: 0; font-size: 18px; line-height: 1.6; color: #DCE3EB">Priya Lalwani is a co-founder of OMAV Global, where she leads the firm’s strategy, operations and public-sector transformation work. She holds an MBA in Corporate Strategy and Operations from Columbia Business School.</p>
+<p style="margin: 16px 0 0; font-size: 16px; line-height: 1.65; color: #9AA4B2">Priya has led multi-million-dollar modernisation programmes for US state governments, directing cross-functional teams of more than sixty professionals across two continents. Her coordination of a twenty-four-hour response to a state-level security incident was recognised with the GovTech Innovation Award.</p>
+<p style="margin: 16px 0 0; font-size: 16px; line-height: 1.65; color: #9AA4B2">Previously, as Chief Strategy Officer and a founding executive of an education venture serving Europe, the Middle East, Africa and the United States, she more than doubled revenue and introduced AI-enabled analytics and matching that improved student retention by a quarter. At Columbia, she served as Vice President of the South Asian Business Association.</p>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 18px 64px; padding: 44px 0; border-top: 1px solid rgba(220,228,238,0.1)">
+<div style="flex: 0 1 360px">
+<h3 style="margin: 0; font-size: clamp(26px, 2.2vw, 32px); font-weight: 500; letter-spacing: -0.02em">Varad Ozarkar</h3>
+<div style="margin-top: 8px; font-size: 15px; line-height: 1.5; color: #AEB7C3">Co-founder</div>
+<div style="margin-top: 16px; font-size: 12px; letter-spacing: 0.18em; line-height: 1.7; color: {{accent}}">AI GOVERNANCE · CYBER POLICY · INTERNATIONAL STRATEGY</div>
+</div>
+<div style="flex: 1 1 480px; max-width: 780px">
+<p style="margin: 0; font-size: 18px; line-height: 1.6; color: #DCE3EB">Varad Ozarkar is a co-founder of OMAV Global, where he leads the firm’s work on AI governance and international strategy. His platforms are in use across the Maharashtra state administration.</p>
+<p style="margin: 16px 0 0; font-size: 16px; line-height: 1.65; color: #9AA4B2">Varad conceived and deployed Maharashtra’s first AI-based public-sector recruitment system, designed for transparency and constitutional bias controls, and built the state’s cyber-safety platforms, including an AI-powered cyber-crime call agent and the Maharashtra Cyber Safe app. The work was felicitated by the Hon’ble Chief Minister of Maharashtra and honoured at the Bombay Stock Exchange during DSCI and NASSCOM’s “Ring the Bell for Security &amp; Privacy.”</p>
+<p style="margin: 16px 0 0; font-size: 16px; line-height: 1.65; color: #9AA4B2">He advises state law-enforcement leadership on AI and cyber strategy, and helped shape the New Jersey–India Mission on Investment and Strategy with the office of Governor Phil Murphy. He was invited to the Harvard India Conference in 2025.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section id="contact" style="position: relative; z-index: 2; background: #05070B; padding: clamp(112px, 13vw, 200px) 0 clamp(96px, 10vw, 144px); border-top: 1px solid rgba(220,228,238,0.06)">
+<div style="max-width: 1440px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 56px)">
+<div style="display: flex; align-items: center; gap: 14px; font-size: 12px; letter-spacing: 0.3em; color: #9AA4B2; font-weight: 500"><span style="display: block; width: 28px; height: 1px; background: {{accent}}"></span><span>CONTACT</span></div>
+<h2 style="margin: 24px 0 0; font-size: clamp(42px, 6.2vw, 96px); font-weight: 500; letter-spacing: -0.04em; line-height: 1">Begin a conversation.</h2>
+<div style="margin-top: clamp(40px, 5vw, 64px); display: flex; flex-wrap: wrap; gap: 40px 80px; align-items: flex-end; justify-content: space-between">
+<p style="flex: 0 1 460px; margin: 0; font-size: 18px; line-height: 1.6; color: #9AA4B2">For advisory mandates, research collaborations and speaking enquiries, write to us directly.</p>
+<div style="flex: 0 1 auto; display: flex; flex-wrap: wrap; gap: 40px 64px">
+<div>
+<div style="font-size: 12px; letter-spacing: 0.3em; color: #8C96A6">EMAIL</div>
+<a href="mailto:" style="display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; font-size: clamp(20px, 1.8vw, 26px); color: #E9EDF3; text-decoration: none; border-bottom: 1px solid rgba(220,228,238,0.3)">[YOUR EMAIL]</a>
+</div>
+<div>
+<div style="font-size: 12px; letter-spacing: 0.3em; color: #8C96A6">OFFICE</div>
+<div style="display: flex; align-items: center; min-height: 44px; margin-top: 8px; font-size: clamp(20px, 1.8vw, 26px)">[OFFICE ADDRESS]</div>
+</div>
+</div>
+</div>
+<div style="margin-top: 48px; display: flex; flex-wrap: wrap; gap: 12px">
+<a class="omav-btn" href="mailto:">Write to OMAV <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M1 7h11M8 3l4 4-4 4" stroke="currentColor" style="stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round"></path></svg></a>
+</div>
+</div>
+</section>
+
+<footer style="position: relative; z-index: 2; background: #05070B; border-top: 1px solid rgba(220,228,238,0.08)">
+<div style="max-width: 1440px; margin: 0 auto; padding: 40px clamp(20px, 4vw, 56px) 48px; display: flex; flex-wrap: wrap; gap: 24px 48px; align-items: center; justify-content: space-between">
+<div style="display: flex; align-items: center; gap: 16px">
+<span style="font-family: Jost, Futura, 'Century Gothic', sans-serif; font-weight: 500; font-size: 15px; letter-spacing: 0.16em">OMAV</span>
+<span style="font-size: 13px; color: #8C96A6">© 2026 OMAV Global Consultancy Services</span>
+</div>
+<nav aria-label="Footer" style="display: flex; flex-wrap: wrap; gap: 4px 28px; font-size: 13px">
+<a class="omav-link" href="#expertise">Expertise</a>
+<a class="omav-link" href="#approach">Approach</a>
+<a class="omav-link" href="#insights">Insights</a>
+<a class="omav-link" href="#about">About</a>
+<a class="omav-link" href="#top">Back to top</a>
+</nav>
+<div lang="sa" style="font-family: 'Tiro Devanagari Sanskrit', 'Noto Serif Devanagari', serif; font-size: 16px; color: #AEB7C3">॥ अधिकाराणां कृते ॥</div>
+</div>
+</footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#8CC8D8","options":["#8CC8D8","#A9B8D6","#C9B48A","#9FB7A8"]},"intro":{"editor":"boolean","default":true},"$preview":{"width":1440,"height":10800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    if (!this._fns) {
+      var self = this;
+      this._els = {};
+      this._fns = {
+        canvas: function (el) { self._els.canvas = el; },
+        stage: function (el) { self._els.stage = el; },
+        story: function (el) { self._els.story = el; }
+      };
+    }
+    var go = !!(this.state && this.state.go);
+    return {
+      canvasRef: this._fns.canvas,
+      stageRef: this._fns.stage,
+      storyRef: this._fns.story,
+      accent: this.props.accent ?? '#8CC8D8',
+      introClass: this.props.intro === false ? 'omav-nointro' : (go ? 'omav-intro omav-go' : 'omav-intro')
+    };
+  }
+
+  _go() {
+    if (this._alive && !(this.state && this.state.go)) this.setState({ go: true });
+  }
+
+  componentDidMount() {
+    var self = this;
+    var tries = 0;
+    this._alive = true;
+    this._goT = setTimeout(function () { self._go(); }, 3200);
+    var boot = function () {
+      if (!self._alive) return;
+      var e = self._els || {};
+      if (window.THREE && e.canvas && e.stage && e.story) {
+        try { self._start(); } catch (err) { if (window.console) console.warn('OMAV scene', err); }
+        return;
+      }
+      tries += 1;
+      if (tries < 400) self._boot = setTimeout(boot, 50);
+    };
+    boot();
+  }
+
+  componentDidUpdate(prev) {
+    if (this._accent && prev && prev.accent !== this.props.accent) this._accent.set(this.props.accent || '#8CC8D8');
+  }
+
+  componentWillUnmount() {
+    this._alive = false;
+    clearTimeout(this._boot);
+    clearTimeout(this._goT);
+    if (this._stop) this._stop();
+  }
+
+  _start() {
+    var self = this, T = window.THREE, E = this._els;
+    var canvas = E.canvas, stage = E.stage, story = E.story;
+    var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    var skip = reduce || this.props.intro === false;
+    var renderer;
+    try {
+      renderer = new T.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
+    } catch (err) { self._go(); return; }
+    var DPR = Math.min(window.devicePixelRatio || 1, 2);
+    renderer.setPixelRatio(DPR);
+    renderer.setClearColor(0x05070b, 1);
+
+    var scene = new T.Scene();
+    var camera = new T.PerspectiveCamera(32, 1, 0.1, 60);
+    camera.position.set(0, 0, 4.4);
+
+    var SUN = new T.Vector3(-0.95, 0.25, 0.18).normalize();
+    var accent = new T.Color(this.props.accent || '#8CC8D8');
+    var silver = new T.Color('#DCE3EB');
+    this._accent = accent;
+    var TILT = 0.46;
+    var NET = new T.Vector3();
+    var U = {
+      uTime: { value: 0 }, uNet: { value: NET }, uDisc: { value: 1 }, uTilt: { value: TILT },
+      uRings: { value: 0 }, uSweep: { value: 0 }, uImpact: { value: 0 }, uPaths: { value: 0 }, uBeam: { value: 0 }
+    };
+
+    var texReady = false, tLoad = 0;
+    var mgr = new T.LoadingManager();
+    mgr.onLoad = function () { if (!texReady) { texReady = true; tLoad = performance.now(); self._go(); } };
+    var loader = new T.TextureLoader(mgr);
+    var aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    function tex(u) { var t = loader.load(u); t.anisotropy = aniso; return t; }
+    var URL_SPEC = './assets/616359cbb216d7811129f71760995474.jpg';
+    var dayTex = tex('./assets/2419145b1a56f93908364cdba80a4980.jpg');
+    var nightTex = tex('./assets/3b759647416f7940961fc69f639ab848.jpg');
+    var specTex = tex(URL_SPEC);
+
+    var root = new T.Group(); scene.add(root);
+    var tilt = new T.Group(); tilt.rotation.set(0.36, 0, 0.14); root.add(tilt);
+    var spin = new T.Group(); tilt.add(spin);
+    var BASE = Math.PI / 2 - (62 + 180) * Math.PI / 180;
+
+    function ll(lat, lon, r) {
+      var p = (lon + 180) * Math.PI / 180, t = (90 - lat) * Math.PI / 180;
+      return new T.Vector3(-r * Math.cos(p) * Math.sin(t), r * Math.cos(t), r * Math.sin(p) * Math.sin(t));
+    }
+    var ROTX = 'vec3 rx(vec3 p, float a){ float c = cos(a); float s = sin(a); return vec3(p.x, c * p.y - s * p.z, s * p.y + c * p.z); }\n';
+    var UV_VS = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
+
+    var earthMat = new T.ShaderMaterial({
+      uniforms: { dayMap: { value: dayTex }, nightMap: { value: nightTex }, specMap: { value: specTex }, uSun: { value: SUN }, uReveal: { value: 0 }, uFade: { value: 1 } },
+      vertexShader: 'varying vec2 vUv; varying vec3 vN; varying vec3 vW; void main(){ vUv = uv; vec4 wp = modelMatrix * vec4(position, 1.0); vW = wp.xyz; vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * viewMatrix * wp; }',
+      fragmentShader: [
+        'uniform sampler2D dayMap; uniform sampler2D nightMap; uniform sampler2D specMap; uniform vec3 uSun; uniform float uReveal; uniform float uFade;',
+        'varying vec2 vUv; varying vec3 vN; varying vec3 vW;',
+        'void main(){',
+        '  vec3 n = normalize(vN); vec3 v = normalize(cameraPosition - vW);',
+        '  float ndl = dot(n, uSun);',
+        '  vec3 day = texture2D(dayMap, vUv).rgb;',
+        '  float l = dot(day, vec3(0.299, 0.587, 0.114));',
+        '  vec3 dayCol = mix(vec3(l), day, 0.5) * vec3(0.8, 0.9, 1.0);',
+        '  dayCol = dayCol / (1.0 + dayCol * 0.9) * 1.35;',
+        '  float lit = smoothstep(-0.1, 0.6, ndl);',
+        '  vec3 col = dayCol * (0.02 + 0.5 * lit);',
+        '  vec3 night = texture2D(nightMap, vUv).rgb;',
+        '  float dark = 1.0 - smoothstep(-0.22, 0.12, ndl);',
+        '  col += pow(night, vec3(1.25)) * vec3(1.0, 0.85, 0.62) * 1.7 * dark;',
+        '  float spec = texture2D(specMap, vUv).r;',
+        '  vec3 h = normalize(uSun + v);',
+        '  col += spec * pow(max(dot(n, h), 0.0), 48.0) * 0.32 * vec3(0.72, 0.86, 1.0) * lit;',
+        '  float fres = pow(1.0 - max(dot(n, v), 0.0), 2.6);',
+        '  col += vec3(0.42, 0.68, 0.84) * fres * (0.08 + 0.42 * smoothstep(-0.35, 0.6, ndl));',
+        '  gl_FragColor = vec4(col * uReveal, uFade);',
+        '}'
+      ].join('\n'),
+      transparent: true
+    });
+    var earth = new T.Mesh(new T.SphereGeometry(1, 96, 96), earthMat);
+    earth.renderOrder = 2;
+    spin.add(earth);
+
+    var atmoMat = new T.ShaderMaterial({
+      uniforms: { uA: { value: 0 }, uSun: { value: SUN }, uColor: { value: new T.Color('#7FB4D6') } },
+      vertexShader: 'varying vec3 vNV; varying vec3 vNW; void main(){ vNV = normalize(normalMatrix * normal); vNW = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: 'uniform float uA; uniform vec3 uSun; uniform vec3 uColor; varying vec3 vNV; varying vec3 vNW; void main(){ float t = clamp(-vNV.z / 0.42, 0.0, 1.0); float i = pow(t, 2.4); float lf = 0.22 + 0.78 * smoothstep(-0.5, 0.7, dot(normalize(vNW), uSun)); gl_FragColor = vec4(uColor, i * lf * uA * 0.85); }',
+      side: T.BackSide, transparent: true, depthWrite: false, blending: T.AdditiveBlending
+    });
+    var atmo = new T.Mesh(new T.SphereGeometry(1.09, 64, 64), atmoMat);
+    atmo.renderOrder = 1;
+    spin.add(atmo);
+
+    var SITES = [[19.07, 72.88], [51.5, -0.12], [1.35, 103.82], [25.2, 55.27], [38.9, -77.04], [-1.29, 36.82], [35.68, 139.69], [50.85, 4.35], [-33.87, 151.21], [28.61, 77.21]];
+    var ringGeo = new T.RingGeometry(0.9, 1.0, 64);
+    var dotGeo = new T.CircleGeometry(1, 24);
+    var Z = new T.Vector3(0, 0, 1);
+    var markers = [];
+    SITES.forEach(function (s, i) {
+      var n = ll(s[0], s[1], 1).normalize();
+      var q = new T.Quaternion().setFromUnitVectors(Z, n);
+      var dm = new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending });
+      dm.color = silver;
+      var dot = new T.Mesh(dotGeo, dm);
+      dot.position.copy(n).multiplyScalar(1.004); dot.quaternion.copy(q); dot.scale.setScalar(0.0085); dot.renderOrder = 3;
+      spin.add(dot);
+      var rings = [0, 1].map(function (k) {
+        var m = new T.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false, blending: T.AdditiveBlending, side: T.DoubleSide });
+        m.color = k ? accent : silver;
+        var r = new T.Mesh(ringGeo, m);
+        r.position.copy(n).multiplyScalar(1.005); r.quaternion.copy(q); r.renderOrder = 3;
+        spin.add(r);
+        return r;
+      });
+      markers.push({ dot: dot, rings: rings, phase: i * 0.37 });
+    });
+
+    var PAIRS = [[0, 1], [0, 2], [3, 5], [1, 4], [7, 3], [2, 6], [6, 8], [9, 7]];
+    var arcVS = 'attribute float aT; varying float vT; void main(){ vT = aT; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
+    var arcFS = 'uniform float uHead; uniform float uDraw; uniform float uAlpha; uniform vec3 uColor; varying float vT; void main(){ if (vT > uDraw) discard; float tail = smoothstep(uHead - 0.28, uHead, vT) * step(vT, uHead); float a = (0.14 + tail * 0.95) * uAlpha; gl_FragColor = vec4(uColor, a); }';
+    var arcs = PAIRS.map(function (pr, i) {
+      var a = ll(SITES[pr[0]][0], SITES[pr[0]][1], 1).normalize();
+      var b = ll(SITES[pr[1]][0], SITES[pr[1]][1], 1).normalize();
+      var ang = a.angleTo(b), h = 0.05 + ang * 0.16, N = 96, sa = Math.sin(ang);
+      var pos = new Float32Array((N + 1) * 3), at = new Float32Array(N + 1);
+      for (var j = 0; j <= N; j++) {
+        var t = j / N;
+        var w1 = Math.sin((1 - t) * ang) / sa, w2 = Math.sin(t * ang) / sa;
+        var rr = 1.004 + h * Math.sin(Math.PI * t);
+        pos[j * 3] = (a.x * w1 + b.x * w2) * rr;
+        pos[j * 3 + 1] = (a.y * w1 + b.y * w2) * rr;
+        pos[j * 3 + 2] = (a.z * w1 + b.z * w2) * rr;
+        at[j] = t;
+      }
+      var g = new T.BufferGeometry();
+      g.setAttribute('position', new T.BufferAttribute(pos, 3));
+      g.setAttribute('aT', new T.BufferAttribute(at, 1));
+      var mat = new T.ShaderMaterial({
+        uniforms: { uHead: { value: 0 }, uDraw: { value: 0 }, uAlpha: { value: 0 }, uColor: { value: i % 2 ? accent : silver } },
+        vertexShader: arcVS, fragmentShader: arcFS, transparent: true, depthWrite: false, blending: T.AdditiveBlending
+      });
+      var line = new T.Line(g, mat);
+      line.renderOrder = 3;
+      spin.add(line);
+      return { line: line, mat: mat, speed: 0.15 + (i % 3) * 0.045, offset: i * 0.29 };
+    });
+
+    function circleGeo(r, n) {
+      var pos = new Float32Array(n * 3), aa = new Float32Array(n);
+      for (var i = 0; i < n; i++) { var a = i / n * Math.PI * 2; pos[i * 3] = Math.cos(a) * r; pos[i * 3 + 2] = Math.sin(a) * r; aa[i] = i / n; }
+      var g = new T.BufferGeometry();
+      g.setAttribute('position', new T.BufferAttribute(pos, 3));
+      g.setAttribute('aA', new T.BufferAttribute(aa, 1));
+      return g;
+    }
+    var orbitMat = new T.ShaderMaterial({
+      uniforms: { uA: { value: 0 }, uTime: U.uTime, uColor: { value: silver } },
+      vertexShader: 'attribute float aA; varying float vA; void main(){ vA = aA; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: 'uniform float uA; uniform float uTime; uniform vec3 uColor; varying float vA; void main(){ float dash = step(0.55, fract(vA * 140.0)); float sw = pow(0.5 + 0.5 * cos(vA * 6.28318 - uTime * 0.22), 6.0); gl_FragColor = vec4(uColor, uA * (0.15 + 0.85 * dash) * (0.2 + 0.8 * sw)); }',
+      transparent: true, depthWrite: false, blending: T.AdditiveBlending
+    });
+    var orbit1 = new T.LineLoop(circleGeo(1.34, 400), orbitMat); orbit1.rotation.set(1.32, 0, 0.32); orbit1.renderOrder = 3; root.add(orbit1);
+    var orbit2 = new T.LineLoop(circleGeo(1.52, 460), orbitMat); orbit2.rotation.set(1.12, 0.4, -0.5); orbit2.renderOrder = 3; root.add(orbit2);
+
+    var P_VS = [
+      'attribute vec3 aG; attribute vec3 aC; attribute float aR; attribute float aA; attribute float aS; attribute float aZ; attribute float aK;',
+      'uniform mat4 uGlobe; uniform vec3 uNet; uniform float uTilt; uniform float uTime; uniform float uScatter; uniform float uOrder; uniform float uConverge;',
+      'uniform float uImpact; uniform float uAlpha; uniform float uPix; uniform float uDisc; uniform float uSweep;',
+      'varying float vA; varying float vK; varying float vB;',
+      ROTX,
+      'float ease(float x){ x = clamp(x, 0.0, 1.0); return x * x * (3.0 - 2.0 * x); }',
+      'void main(){',
+      '  vec3 g = (uGlobe * vec4(aG * 1.008, 1.0)).xyz;',
+      '  float t = uTime;',
+      '  vec3 drift = vec3(sin(t * 0.13 + aS * 40.0), cos(t * 0.11 + aS * 25.0), sin(t * 0.09 + aS * 13.0)) * 0.05;',
+      '  vec3 c = uNet + aC * max(uDisc, 0.5) + drift;',
+      '  float r = aR * uDisc;',
+      '  float ang = aA + t * (0.10 / (0.2 + aR));',
+      '  float sel = 1.0 - smoothstep(uConverge - 0.05, uConverge, aS);',
+      '  float f = fract(t * (0.05 + aS * 0.04) + aS * 17.0);',
+      '  float k = smoothstep(0.0, 0.72, f);',
+      '  float aIn = ang + k * 5.0;',
+      '  vec3 ringL = vec3(cos(ang) * r, 0.0, sin(ang) * r);',
+      '  vec3 inL = vec3(cos(aIn) * r * (1.0 - k), 0.0, sin(aIn) * r * (1.0 - k));',
+      '  float rise = pow(smoothstep(0.68, 1.0, f), 1.4) * 2.6 * max(uDisc, 0.55) * sel;',
+      '  vec3 Lp = mix(ringL, inL, sel);',
+      '  float wr = fract(t * 0.18) * 1.9;',
+      '  float wave = exp(-pow((aR - wr) * 9.0, 2.0)) * uImpact * (1.0 - sel);',
+      '  Lp.y += wave * 0.05;',
+      '  vec3 ringP = uNet + rx(Lp, uTilt) + rx(vec3(0.0, rise, 0.0), uTilt * 0.25);',
+      '  float s1 = ease(uScatter * 1.6 - aS * 0.6);',
+      '  float s2 = ease(uOrder * 1.6 - fract(aS * 7.31) * 0.6);',
+      '  float tr = sin(s2 * 3.14159);',
+      '  vec3 p = mix(g, c, s1);',
+      '  p = mix(p, ringP, s2) + vec3(sin(aS * 91.0), cos(aS * 53.0), sin(aS * 27.0)) * tr * 0.18;',
+      '  vec4 mv = modelViewMatrix * vec4(p, 1.0);',
+      '  gl_Position = projectionMatrix * mv;',
+      '  float tw = 0.75 + 0.25 * sin(t * (1.0 + aS * 2.0) + aS * 60.0);',
+      '  float sw = pow(0.5 + 0.5 * cos(ang - t * 0.35 - aR * 3.0), 10.0) * uSweep * s2;',
+      '  float inBeam = sel * smoothstep(0.6, 0.75, f) * s2;',
+      '  vB = tw * (0.75 + sw * 1.4 + wave * 2.0 + inBeam * 1.2);',
+      '  vA = uAlpha * (0.35 + 0.65 * s1);',
+      '  vK = aK;',
+      '  gl_PointSize = aZ * uPix * (4.4 / -mv.z);',
+      '}'
+    ].join('\n');
+    var P_FS = 'uniform vec3 uSilver; uniform vec3 uCyan; varying float vA; varying float vK; varying float vB; void main(){ float d = length(gl_PointCoord - 0.5); float a = smoothstep(0.5, 0.05, d); gl_FragColor = vec4(mix(uSilver, uCyan, vK) * vB, a * vA); }';
+    var pMat = new T.ShaderMaterial({
+      uniforms: {
+        uGlobe: { value: new T.Matrix4() }, uNet: U.uNet, uTilt: U.uTilt, uTime: U.uTime, uScatter: { value: 0 }, uOrder: { value: 0 },
+        uConverge: { value: 0 }, uImpact: U.uImpact, uAlpha: { value: 0 }, uPix: { value: 1 }, uDisc: U.uDisc, uSweep: U.uSweep,
+        uSilver: { value: silver }, uCyan: { value: accent }
+      },
+      vertexShader: P_VS, fragmentShader: P_FS, transparent: true, depthWrite: false, blending: T.AdditiveBlending
+    });
+
+    var alive = true;
+    var mobile = (stage.clientWidth || 1200) < 760;
+
+    function buildParticles(img) {
+      if (!alive) return;
+      var IW = 512, IH = 256, data = null;
+      if (img) {
+        try {
+          var c = document.createElement('canvas'); c.width = IW; c.height = IH;
+          var cx = c.getContext('2d'); cx.drawImage(img, 0, 0, IW, IH);
+          data = cx.getImageData(0, 0, IW, IH).data;
+        } catch (err) { data = null; }
+      }
+      var N = mobile ? 5200 : 10000;
+      var aG = new Float32Array(N * 3), aC = new Float32Array(N * 3), aR = new Float32Array(N), aA = new Float32Array(N), aS = new Float32Array(N), aZ = new Float32Array(N), aK = new Float32Array(N);
+      var RINGS = 44, R0 = 0.14, DR = 0.032, weights = [], wsum = 0;
+      for (var k = 0; k < RINGS; k++) { var w = (R0 + k * DR) * (0.55 + 0.45 * Math.random()); weights.push(w); wsum += w; }
+      for (var i = 0; i < N; i++) {
+        var lat = 0, lon = 0, tries = 0;
+        while (true) {
+          var u = Math.random(), v = Math.random();
+          lat = Math.asin(2 * v - 1) * 180 / Math.PI; lon = u * 360 - 180;
+          if (!data) break;
+          var px = Math.min(IW - 1, Math.floor(u * IW)), py = Math.min(IH - 1, Math.floor((90 - lat) / 180 * IH));
+          if (data[(py * IW + px) * 4] < 90 || tries > 14 || Math.random() < 0.05) break;
+          tries += 1;
+        }
+        var gp = ll(lat, lon, 1);
+        aG[i * 3] = gp.x; aG[i * 3 + 1] = gp.y; aG[i * 3 + 2] = gp.z;
+        var z = 2 * Math.random() - 1, th = Math.random() * Math.PI * 2, sq = Math.sqrt(1 - z * z);
+        var d = 0.45 + Math.pow(Math.random(), 0.7) * 1.55;
+        aC[i * 3] = sq * Math.cos(th) * d * 1.3; aC[i * 3 + 1] = sq * Math.sin(th) * d * 0.75; aC[i * 3 + 2] = z * d * 0.6;
+        var pick = Math.random() * wsum, kk = 0;
+        while (kk < RINGS - 1 && pick > weights[kk]) { pick -= weights[kk]; kk += 1; }
+        aR[i] = R0 + kk * DR + (Math.random() - 0.5) * 0.006;
+        aA[i] = Math.random() * Math.PI * 2;
+        aS[i] = Math.random();
+        aZ[i] = Math.random() < 0.06 ? 2.6 + Math.random() * 1.6 : 0.9 + Math.random() * 1.0;
+        aK[i] = Math.random() < 0.2 ? 1 : 0;
+      }
+      var g = new T.BufferGeometry();
+      g.setAttribute('position', new T.BufferAttribute(aG, 3));
+      g.setAttribute('aG', new T.BufferAttribute(aG, 3));
+      g.setAttribute('aC', new T.BufferAttribute(aC, 3));
+      g.setAttribute('aR', new T.BufferAttribute(aR, 1));
+      g.setAttribute('aA', new T.BufferAttribute(aA, 1));
+      g.setAttribute('aS', new T.BufferAttribute(aS, 1));
+      g.setAttribute('aZ', new T.BufferAttribute(aZ, 1));
+      g.setAttribute('aK', new T.BufferAttribute(aK, 1));
+      var pts = new T.Points(g, pMat);
+      pts.frustumCulled = false; pts.renderOrder = 4;
+      scene.add(pts);
+    }
+    var specImg = new Image();
+    specImg.onload = function () { buildParticles(specImg); };
+    specImg.onerror = function () { buildParticles(null); };
+    specImg.src = URL_SPEC;
+
+    var RL_N = 88, RL_SEG = 180, rlCount = RL_N * RL_SEG * 2;
+    var rlPos = new Float32Array(rlCount * 3), rlR = new Float32Array(rlCount), rlA = new Float32Array(rlCount), ix = 0;
+    for (var rk = 0; rk < RL_N; rk++) {
+      var rad = 0.12 + rk * 0.0165;
+      for (var sg = 0; sg < RL_SEG; sg++) {
+        rlR[ix] = rad; rlA[ix] = sg / RL_SEG * Math.PI * 2; ix += 1;
+        rlR[ix] = rad; rlA[ix] = (sg + 1) / RL_SEG * Math.PI * 2; ix += 1;
+      }
+    }
+    var rlGeo = new T.BufferGeometry();
+    rlGeo.setAttribute('position', new T.BufferAttribute(rlPos, 3));
+    rlGeo.setAttribute('aR', new T.BufferAttribute(rlR, 1));
+    rlGeo.setAttribute('aA', new T.BufferAttribute(rlA, 1));
+    var rlMat = new T.ShaderMaterial({
+      uniforms: { uNet: U.uNet, uTilt: U.uTilt, uDisc: U.uDisc, uTime: U.uTime, uRings: U.uRings, uSweep: U.uSweep, uImpact: U.uImpact, uColor: { value: silver } },
+      vertexShader: [
+        'attribute float aR; attribute float aA; uniform vec3 uNet; uniform float uTilt; uniform float uDisc; uniform float uTime; uniform float uRings; uniform float uSweep; uniform float uImpact; varying float vAl;',
+        ROTX,
+        'void main(){',
+        '  vec3 Lp = vec3(cos(aA) * aR * uDisc, 0.0, sin(aA) * aR * uDisc);',
+        '  vec3 p = uNet + rx(Lp, uTilt);',
+        '  float sw = pow(0.5 + 0.5 * cos(aA - uTime * 0.35 - aR * 3.0), 10.0) * uSweep;',
+        '  float wr = fract(uTime * 0.18) * 1.9;',
+        '  float wave = exp(-pow((aR - wr) * 9.0, 2.0)) * uImpact;',
+        '  float edge = smoothstep(0.1, 0.32, aR) * (1.0 - smoothstep(1.25, 1.56, aR));',
+        '  float h = fract(sin(aR * 913.7) * 43758.5);',
+        '  vAl = uRings * edge * (0.035 + 0.07 * h + sw * 0.32 + wave * 0.5);',
+        '  gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);',
+        '}'
+      ].join('\n'),
+      fragmentShader: 'uniform vec3 uColor; varying float vAl; void main(){ gl_FragColor = vec4(uColor, vAl); }',
+      transparent: true, depthWrite: false, blending: T.AdditiveBlending
+    });
+    var ringLines = new T.LineSegments(rlGeo, rlMat);
+    ringLines.frustumCulled = false; ringLines.renderOrder = 4;
+    scene.add(ringLines);
+
+    var SP_N = 16, SP_SEG = 140, spCount = SP_N * SP_SEG * 2;
+    var spPos = new Float32Array(spCount * 3), spT = new Float32Array(spCount), spO = new Float32Array(spCount), jx = 0;
+    for (var si = 0; si < SP_N; si++) {
+      var a0 = si / SP_N * Math.PI * 2, off = Math.random();
+      for (var sj = 0; sj < SP_SEG; sj++) {
+        for (var e = 0; e < 2; e++) {
+          var tt = (sj + e) / SP_SEG;
+          var rr2 = 1.5 * Math.pow(1 - tt, 1.15) + 0.03;
+          var aa2 = a0 + tt * 3.4;
+          spPos[jx * 3] = Math.cos(aa2) * rr2; spPos[jx * 3 + 1] = 0; spPos[jx * 3 + 2] = Math.sin(aa2) * rr2;
+          spT[jx] = tt; spO[jx] = off; jx += 1;
+        }
+      }
+    }
+    var spGeo = new T.BufferGeometry();
+    spGeo.setAttribute('position', new T.BufferAttribute(spPos, 3));
+    spGeo.setAttribute('aT', new T.BufferAttribute(spT, 1));
+    spGeo.setAttribute('aO', new T.BufferAttribute(spO, 1));
+    var spMat = new T.ShaderMaterial({
+      uniforms: { uNet: U.uNet, uTilt: U.uTilt, uDisc: U.uDisc, uTime: U.uTime, uPaths: U.uPaths, uColor: { value: accent } },
+      vertexShader: 'attribute float aT; attribute float aO; uniform vec3 uNet; uniform float uTilt; uniform float uDisc; varying float vT; varying float vO;\n' + ROTX + 'void main(){ vT = aT; vO = aO; vec3 p = uNet + rx(position * uDisc, uTilt); gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }',
+      fragmentShader: 'uniform float uTime; uniform float uPaths; uniform vec3 uColor; varying float vT; varying float vO; void main(){ float head = fract(uTime * 0.11 + vO); float tail = smoothstep(head - 0.3, head, vT) * step(vT, head); gl_FragColor = vec4(uColor, (0.04 + tail * 0.7) * uPaths * smoothstep(0.0, 0.08, vT)); }',
+      transparent: true, depthWrite: false, blending: T.AdditiveBlending
+    });
+    var spirals = new T.LineSegments(spGeo, spMat);
+    spirals.frustumCulled = false; spirals.renderOrder = 4;
+    scene.add(spirals);
+
+    var beamGeo = new T.PlaneGeometry(0.7, 3.6); beamGeo.translate(0, 1.8, 0);
+    var beamMat = new T.ShaderMaterial({
+      uniforms: { uBeam: U.uBeam, uTime: U.uTime, uCyan: { value: accent } },
+      vertexShader: UV_VS,
+      fragmentShader: 'uniform float uBeam; uniform float uTime; uniform vec3 uCyan; varying vec2 vUv; void main(){ float x = abs(vUv.x - 0.5) * 2.0; float core = exp(-x * x * 120.0); float glow = exp(-x * x * 10.0) * 0.22; float y = vUv.y; float vf = smoothstep(0.0, 0.04, y) * pow(1.0 - y, 1.6); float sh = 0.82 + 0.18 * sin(y * 46.0 - uTime * 4.5); gl_FragColor = vec4(mix(uCyan, vec3(1.0), clamp(core * 1.2, 0.0, 1.0)), (core * 1.3 + glow) * vf * sh * uBeam); }',
+      transparent: true, depthWrite: false, blending: T.AdditiveBlending, side: T.DoubleSide
+    });
+    var beam = new T.Mesh(beamGeo, beamMat);
+    beam.frustumCulled = false; beam.renderOrder = 5;
+    scene.add(beam);
+
+    var glowMat = new T.ShaderMaterial({
+      uniforms: { uA: { value: 0 }, uCyan: { value: accent } },
+      vertexShader: UV_VS,
+      fragmentShader: 'uniform float uA; uniform vec3 uCyan; varying vec2 vUv; void main(){ float d = length(vUv - 0.5) * 2.0; float a = (exp(-d * d * 18.0) * 0.9 + exp(-d * d * 3.0) * 0.16) * uA; gl_FragColor = vec4(mix(uCyan, vec3(1.0), exp(-d * d * 30.0)), a); }',
+      transparent: true, depthWrite: false, blending: T.AdditiveBlending
+    });
+    var glow = new T.Mesh(new T.PlaneGeometry(1, 1), glowMat);
+    glow.renderOrder = 5;
+    scene.add(glow);
+
+    var L = { gx: 1.2, gy: 0, gs: 1, nx: 1, ny: -0.2, disc: 0.8, H: 800 };
+    function layout() {
+      var W = stage.clientWidth || 1, H = stage.clientHeight || 1;
+      renderer.setSize(W, H, false);
+      camera.aspect = W / H;
+      camera.updateProjectionMatrix();
+      var hh = Math.tan(camera.fov * Math.PI / 360) * camera.position.z, hw = hh * camera.aspect;
+      L.H = H;
+      if (camera.aspect >= 1.05) {
+        L.gs = Math.min(1.1, hw * 0.52);
+        L.gx = Math.max(hw - L.gs * 0.9, L.gs + hw * 0.08);
+        L.gy = -0.02;
+        L.disc = Math.min(0.92, hw * 0.36);
+        L.nx = hw * 0.46; L.ny = -0.2;
+      } else {
+        L.gs = Math.max(0.6, Math.min(1.0, hw * 1.1));
+        L.gx = hw * 0.3; L.gy = -hh * 0.72;
+        L.disc = Math.min(0.9, hw * 0.6);
+        L.nx = 0; L.ny = hh * 0.22;
+      }
+    }
+    layout();
+    var ro = null;
+    if (window.ResizeObserver) { ro = new ResizeObserver(function () { layout(); }); ro.observe(stage); }
+    window.addEventListener('resize', layout);
+
+    var mx = 0, my = 0, pmx = 0, pmy = 0, yaw = 0, vel = 0, pitch = 0, dragging = false, lx = 0, ly = 0;
+    function onDown(e) { dragging = true; lx = e.clientX; ly = e.clientY; vel = 0; }
+    function onDrag(e) {
+      if (dragging) {
+        var dx = e.clientX - lx, dy = e.clientY - ly;
+        lx = e.clientX; ly = e.clientY;
+        yaw += dx * 0.005; vel = dx * 0.003;
+        pitch = Math.max(-0.3, Math.min(0.3, pitch + dy * 0.003));
+      }
+      if (!e.pointerType || e.pointerType === 'mouse') {
+        mx = (e.clientX / (window.innerWidth || 1)) * 2 - 1;
+        my = (e.clientY / (window.innerHeight || 1)) * 2 - 1;
+      }
+    }
+    function onUp() { dragging = false; }
+    canvas.addEventListener('pointerdown', onDown);
+    window.addEventListener('pointermove', onDrag);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+
+    function sm(a, b, x) { var t = (x - a) / (b - a); t = t < 0 ? 0 : (t > 1 ? 1 : t); return t * t * (3 - 2 * t); }
+    var cur = { scatter: 0, order: 0, fade: 1, palpha: 0, net: 1, rings: 0, paths: 0, sweep: 0, conv: 0, beam: 0, impact: 0 };
+    var t0 = performance.now(), last = t0, tIntro = 0, raf = 0;
+
+    function frame(now) {
+      if (!alive) return;
+      raf = requestAnimationFrame(frame);
+      var dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
+      last = now;
+      if (document.hidden) return;
+      var rect = story.getBoundingClientRect();
+      var vh = window.innerHeight || L.H;
+      if (rect.bottom < -40 || rect.top > vh + 40) return;
+      tIntro = skip ? 10 : (texReady ? (now - tLoad) / 1000 : 0);
+      var time = (now - t0) / 1000;
+      var SH = stage.clientHeight || L.H;
+      var u = Math.max(0, -rect.top / SH);
+      var tg = {
+        scatter: sm(0.18, 1.2, u), order: sm(1.5, 2.35, u), fade: 1 - sm(0.2, 0.8, u), palpha: sm(0.12, 0.45, u),
+        net: 1 - sm(0.04, 0.4, u), rings: sm(1.9, 2.6, u), paths: sm(2.6, 3.2, u) * (1 - 0.6 * sm(4.2, 4.7, u)),
+        sweep: sm(2.5, 3.1, u), conv: 0.45 * sm(3.3, 4.1, u), beam: sm(3.5, 4.5, u), impact: sm(4.2, 4.7, u)
+      };
+      var kf = 1 - Math.exp(-dt * 5);
+      for (var key in tg) cur[key] += (tg[key] - cur[key]) * kf;
+
+      var rev = sm(0, 2.4, tIntro), netIn = sm(2.0, 3.6, tIntro), draw = sm(2.2, 4.4, tIntro);
+      var settle = 1 - Math.pow(1 - Math.min(1, tIntro / 5.5), 3);
+
+      if (!dragging) { vel *= Math.pow(0.05, dt); yaw += vel * dt * 60; pitch *= Math.pow(0.2, dt); }
+      var pk = 1 - Math.exp(-dt * 2.5);
+      pmx += (mx - pmx) * pk; pmy += (my - pmy) * pk;
+
+      spin.rotation.y = BASE + time * (reduce ? 0.008 : 0.028) - (1 - settle) * 0.8 + yaw;
+      root.rotation.y = pmx * 0.08;
+      root.rotation.x = pmy * 0.05 + pitch;
+      root.position.set(L.gx, L.gy, 0);
+      root.scale.setScalar(L.gs * (0.93 + 0.07 * rev) * (1 - 0.05 * (1 - cur.fade)));
+
+      earthMat.uniforms.uReveal.value = rev;
+      earthMat.uniforms.uFade.value = cur.fade;
+      earth.visible = cur.fade > 0.004;
+      earthMat.depthWrite = cur.fade > 0.55;
+      atmoMat.uniforms.uA.value = rev * cur.fade;
+      atmo.visible = earth.visible;
+
+      var na = netIn * cur.net, show = na > 0.002;
+      for (var i = 0; i < markers.length; i++) {
+        var m = markers[i];
+        m.dot.visible = show; m.dot.material.opacity = na * 0.9;
+        for (var j = 0; j < 2; j++) {
+          var ph = (time * 0.32 + m.phase + j * 0.5) % 1;
+          var rg = m.rings[j];
+          rg.visible = show;
+          rg.scale.setScalar(0.012 + ph * 0.08);
+          rg.material.opacity = Math.pow(1 - ph, 1.6) * 0.6 * na;
+        }
+      }
+      for (var ai = 0; ai < arcs.length; ai++) {
+        var A = arcs[ai];
+        A.line.visible = show;
+        A.mat.uniforms.uDraw.value = draw;
+        A.mat.uniforms.uAlpha.value = na * 0.85;
+        A.mat.uniforms.uHead.value = ((time * A.speed + A.offset) % 1) * 1.35;
+      }
+      orbitMat.uniforms.uA.value = na * 0.14;
+      orbit1.visible = orbit2.visible = show;
+
+      U.uTime.value = time;
+      NET.set(L.nx, L.ny, 0);
+      U.uDisc.value = L.disc;
+      U.uRings.value = cur.rings;
+      U.uSweep.value = cur.sweep;
+      U.uImpact.value = cur.impact;
+      U.uPaths.value = cur.paths;
+      U.uBeam.value = cur.beam;
+      ringLines.visible = cur.rings > 0.002;
+      spirals.visible = cur.paths > 0.002;
+
+      beam.visible = cur.beam > 0.002;
+      beam.position.copy(NET);
+      beam.rotation.x = TILT * 0.25;
+      beam.scale.set(Math.max(L.disc, 0.5) * 1.1, Math.max(L.disc, 0.55) * 1.15, 1);
+      glow.position.copy(NET);
+      glow.scale.setScalar(L.disc * 1.5);
+      glowMat.uniforms.uA.value = cur.rings * 0.3 + cur.beam * 0.8;
+      glow.visible = glowMat.uniforms.uA.value > 0.002;
+
+      scene.updateMatrixWorld();
+      var P = pMat.uniforms;
+      P.uGlobe.value.copy(spin.matrixWorld);
+      P.uScatter.value = cur.scatter;
+      P.uOrder.value = cur.order;
+      P.uConverge.value = cur.conv;
+      P.uAlpha.value = cur.palpha * rev;
+      P.uPix.value = DPR * Math.max(0.8, L.H / 900);
+
+      renderer.render(scene, camera);
+    }
+    raf = requestAnimationFrame(frame);
+
+    this._stop = function () {
+      alive = false;
+      cancelAnimationFrame(raf);
+      if (ro) ro.disconnect();
+      window.removeEventListener('resize', layout);
+      canvas.removeEventListener('pointerdown', onDown);
+      window.removeEventListener('pointermove', onDrag);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      try { renderer.dispose(); } catch (err) {}
+    };
+  }
+}
+</script>
+</body>
+</html>
