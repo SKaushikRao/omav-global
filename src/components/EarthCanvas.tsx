@@ -337,10 +337,56 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       void main(){
         if (vT > uDraw) discard;
         float tail = smoothstep(uHead - 0.28, uHead, vT) * step(vT, uHead);
-        float a = (0.14 + tail * 0.95) * uAlpha;
+        float a = (0.14 + tail * 0.38) * uAlpha;
         gl_FragColor = vec4(uColor, a);
       }
     `;
+
+    // Small eagles from the OMAV mark (wings + blue head) fly the arcs
+    function eagleTexture() {
+      const c = document.createElement('canvas');
+      c.width = 512;
+      c.height = 256;
+      const cx = c.getContext('2d');
+      if (cx) {
+        // Mark coordinates: wings span x ±143, head at the origin, nib to y 99
+        cx.translate(256, 64);
+        cx.scale(1.62, 1.62);
+        const wing = new Path2D(
+          'M -143 25 C -128 12 -108 6 -88 6 C -58 6 -22 30 0 57 C 22 30 58 6 88 6 C 108 6 128 12 143 25 C 126 22 108 25 92 27 C 60 31 28 52 7.5 80 L -7.5 80 C -28 52 -60 31 -92 27 C -108 25 -126 22 -143 25 Z'
+        );
+        cx.save();
+        cx.translate(0, 4.5);
+        cx.fillStyle = '#5E6674';
+        cx.fill(wing);
+        cx.restore();
+        cx.fillStyle = '#E4E8EE';
+        cx.fill(wing);
+        cx.fillRect(-7.5, 79, 15, 5);
+        cx.beginPath();
+        cx.moveTo(-6, 84);
+        cx.lineTo(6, 84);
+        cx.lineTo(0, 99);
+        cx.closePath();
+        cx.fill();
+        cx.beginPath();
+        cx.arc(0, 0, 24, 0, Math.PI * 2);
+        cx.fillStyle = '#FFFFFF';
+        cx.fill();
+        cx.beginPath();
+        cx.arc(0, 0, 20, 0, Math.PI * 2);
+        cx.fillStyle = '#2D307D';
+        cx.fill();
+      }
+      const t = new THREE.CanvasTexture(c);
+      t.colorSpace = THREE.SRGBColorSpace;
+      t.anisotropy = aniso;
+      return t;
+    }
+
+    const eagleTex = eagleTexture();
+    const EAGLE_W = 0.075;
+    const EAGLE_H = EAGLE_W * 0.5;
 
     const arcs = PAIRS.map((pr, i) => {
       const a = ll(SITES[pr[0]][0], SITES[pr[0]][1], 1).normalize();
@@ -352,16 +398,34 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       const pos = new Float32Array((N + 1) * 3);
       const at = new Float32Array(N + 1);
 
-      for (let j = 0; j <= N; j++) {
-        const t = j / N;
+      const pointAt = (t: number, out: THREE.Vector3) => {
         const w1 = Math.sin((1 - t) * ang) / sa;
         const w2 = Math.sin(t * ang) / sa;
         const rr = 1.004 + h * Math.sin(Math.PI * t);
-        pos[j * 3] = (a.x * w1 + b.x * w2) * rr;
-        pos[j * 3 + 1] = (a.y * w1 + b.y * w2) * rr;
-        pos[j * 3 + 2] = (a.z * w1 + b.z * w2) * rr;
+        return out.set((a.x * w1 + b.x * w2) * rr, (a.y * w1 + b.y * w2) * rr, (a.z * w1 + b.z * w2) * rr);
+      };
+
+      const tmp = new THREE.Vector3();
+      for (let j = 0; j <= N; j++) {
+        const t = j / N;
+        pointAt(t, tmp);
+        pos[j * 3] = tmp.x;
+        pos[j * 3 + 1] = tmp.y;
+        pos[j * 3 + 2] = tmp.z;
         at[j] = t;
       }
+
+      const eagleMat = new THREE.SpriteMaterial({
+        map: eagleTex,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+      });
+      const eagle = new THREE.Sprite(eagleMat);
+      eagle.scale.set(EAGLE_W, EAGLE_H, 1);
+      eagle.center.set(0.5, 0.75);
+      eagle.renderOrder = 4;
+      spin.add(eagle);
 
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -384,8 +448,11 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       const line = new THREE.Line(g, mat);
       line.renderOrder = 3;
       spin.add(line);
-      return { line, mat, speed: 0.15 + (i % 3) * 0.045, offset: i * 0.29 };
+      return { line, mat, eagle, eagleMat, pointAt, speed: 0.15 + (i % 3) * 0.045, offset: i * 0.29 };
     });
+
+    const eP0 = new THREE.Vector3();
+    const eP1 = new THREE.Vector3();
 
     // Orbit loops
     function circleGeo(r: number, n: number) {
@@ -903,24 +970,19 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
         L.ny = hh * 0.22;
       }
 
-      // Publish the globe's exact on-screen silhouette for the logo intro.
-      // An off-axis sphere projects to an ellipse stretched along its offset.
-      const d = Math.hypot(L.gx, L.gy, camera.position.z);
-      const th = Math.atan(Math.hypot(L.gx, L.gy) / camera.position.z);
-      const sa = Math.min(0.99, L.gs / d);
-      const den = Math.cos(th) * Math.cos(th) - sa * sa;
-      const ca = Math.sqrt(1 - sa * sa);
-      const pxPerTan = H / 2 / Math.tan((camera.fov * Math.PI) / 360);
-      const ang = Math.atan2(-L.gy, L.gx);
-      const off = ((Math.sin(th) * Math.cos(th)) / den) * pxPerTan;
+      // Publish camera + resting globe placement for the logo intro
       const r = stage.getBoundingClientRect();
-      introBridge.setTarget({
-        x: r.left + W / 2 + Math.cos(ang) * off,
-        y: r.top + H / 2 + Math.sin(ang) * off,
-        a: ((sa * ca) / den) * pxPerTan,
-        b: (sa / Math.sqrt(den)) * pxPerTan,
-        angle: ang,
-      });
+      introBridge.setGlobe(
+        {
+          left: r.left,
+          top: r.top,
+          W,
+          H,
+          camZ: camera.position.z,
+          tanHalf: Math.tan((camera.fov * Math.PI) / 360),
+        },
+        { x: L.gx, y: L.gy, s: L.gs }
+      );
     }
 
     layout();
@@ -1043,7 +1105,9 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
         (cur as any)[key] += ((tg as any)[key] - (cur as any)[key]) * kf;
       }
 
-      const rev = sm(0, introDriven ? 1.6 : 2.4, tIntro);
+      // While the logo intro runs, the globe flies inside the logo's blue dot
+      const ip = introBridge.poseAt(now);
+      const rev = ip ? ip.mix : sm(0, introDriven ? 1.6 : 2.4, tIntro);
       const netIn = sm(2.0, 3.6, tIntro);
       const draw = sm(2.2, 4.4, tIntro);
       const settle = 1 - Math.pow(1 - Math.min(1, tIntro / 5.5), 3);
@@ -1061,8 +1125,13 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       spin.rotation.y = BASE + time * (prefersReducedMotion ? 0.008 : 0.028) - (1 - settle) * 0.8 + yaw;
       root.rotation.y = pmx * 0.08;
       root.rotation.x = pmy * 0.05 + pitch;
-      root.position.set(L.gx, L.gy, 0);
-      root.scale.setScalar(L.gs * (1 - 0.05 * (1 - cur.fade)));
+      if (ip) {
+        root.position.set(ip.pose.x, ip.pose.y, 0);
+        root.scale.setScalar(ip.pose.s);
+      } else {
+        root.position.set(L.gx, L.gy, 0);
+        root.scale.setScalar(L.gs * (1 - 0.05 * (1 - cur.fade)));
+      }
 
       earthMat.uniforms.uReveal.value = rev;
       earthMat.uniforms.uFade.value = cur.fade;
@@ -1122,6 +1191,24 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       glow.visible = glowMat.uniforms.uA.value > 0.002;
 
       scene.updateMatrixWorld();
+
+      // Eagles ride each arc's head, turned to face their direction of flight
+      for (let ai = 0; ai < arcs.length; ai++) {
+        const A = arcs[ai];
+        const hd = A.mat.uniforms.uHead.value;
+        const vis = show && hd > 0 && hd < 1;
+        A.eagle.visible = vis;
+        if (!vis) continue;
+        A.pointAt(hd, eP0);
+        A.eagle.position.copy(eP0);
+        A.pointAt(Math.min(1, hd + 0.01), eP1);
+        eP0.applyMatrix4(spin.matrixWorld).project(camera);
+        eP1.applyMatrix4(spin.matrixWorld).project(camera);
+        A.eagleMat.rotation =
+          Math.atan2(eP1.y - eP0.y, (eP1.x - eP0.x) * camera.aspect) - Math.PI / 2;
+        A.eagleMat.opacity = na * sm(0, 0.08, hd) * (1 - sm(0.92, 1, hd));
+      }
+
       const P = pMat.uniforms;
       P.uGlobe.value.copy(spin.matrixWorld);
       P.uScatter.value = cur.scatter;
