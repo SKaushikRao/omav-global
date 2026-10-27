@@ -24,6 +24,23 @@
   font-family: 'Tiro Devanagari Sanskrit', 'Noto Serif Devanagari', Georgia, serif;
 }
 
+/* Logo intro: page chrome stays hidden until the Earth takes over */
+html.omav-intro-lock {
+  overflow: hidden;
+}
+html.omav-intro [data-intro-reveal] {
+  opacity: 0;
+  transform: translateY(14px);
+}
+html.omav-intro [data-intro-reveal='fade'] {
+  transform: none;
+}
+html.omav-intro-out [data-intro-reveal] {
+  transition:
+    opacity 1.2s cubic-bezier(0.22, 0.7, 0.2, 1) var(--intro-delay, 0s),
+    transform 1.4s cubic-bezier(0.22, 0.7, 0.2, 1) var(--intro-delay, 0s);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

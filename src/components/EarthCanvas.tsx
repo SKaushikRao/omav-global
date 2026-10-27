@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { introBridge } from '../lib/introBridge';
 
 interface EarthCanvasProps {
   accentColor?: string;
@@ -66,17 +67,32 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       uBeam: { value: 0 },
     };
 
-    // Textures loader
+    // Textures loader. While the logo intro is running, the reveal waits for
+    // the logo's blue dot to land on the globe.
     let texReady = false;
+    let revealing = false;
     let tLoad = 0;
-    const mgr = new THREE.LoadingManager();
-    mgr.onLoad = () => {
-      if (!texReady) {
-        texReady = true;
-        tLoad = performance.now();
-        setIsLoaded(true);
-      }
+    const introDriven = introBridge.active;
+
+    const beginReveal = () => {
+      if (revealing || !texReady) return;
+      if (introBridge.active && !introBridge.revealed) return;
+      revealing = true;
+      tLoad = performance.now();
     };
+
+    const markReady = () => {
+      if (texReady) return;
+      texReady = true;
+      setIsLoaded(true);
+      introBridge.setReady();
+      beginReveal();
+    };
+
+    const unsubIntro = introBridge.subscribe(beginReveal);
+
+    const mgr = new THREE.LoadingManager();
+    mgr.onLoad = markReady;
 
     const loader = new THREE.TextureLoader(mgr);
     const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
@@ -86,13 +102,8 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
         path,
         () => {},
         undefined,
-        () => {
-          // If texture fails to load, mark ready anyway so user isn't stuck
-          if (!texReady) {
-            texReady = true;
-            setIsLoaded(true);
-          }
-        }
+        // If texture fails to load, mark ready anyway so user isn't stuck
+        markReady
       );
       t.anisotropy = aniso;
       return t;
@@ -107,13 +118,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
     const specTex = loadTex(URL_SPEC);
 
     // Fallback safety timeout for texture readiness
-    const safetyTimer = setTimeout(() => {
-      if (!texReady) {
-        texReady = true;
-        tLoad = performance.now();
-        setIsLoaded(true);
-      }
-    }, 2500);
+    const safetyTimer = setTimeout(markReady, 2500);
 
     const root = new THREE.Group();
     scene.add(root);
@@ -897,6 +902,25 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
         L.nx = 0;
         L.ny = hh * 0.22;
       }
+
+      // Publish the globe's exact on-screen silhouette for the logo intro.
+      // An off-axis sphere projects to an ellipse stretched along its offset.
+      const d = Math.hypot(L.gx, L.gy, camera.position.z);
+      const th = Math.atan(Math.hypot(L.gx, L.gy) / camera.position.z);
+      const sa = Math.min(0.99, L.gs / d);
+      const den = Math.cos(th) * Math.cos(th) - sa * sa;
+      const ca = Math.sqrt(1 - sa * sa);
+      const pxPerTan = H / 2 / Math.tan((camera.fov * Math.PI) / 360);
+      const ang = Math.atan2(-L.gy, L.gx);
+      const off = ((Math.sin(th) * Math.cos(th)) / den) * pxPerTan;
+      const r = stage.getBoundingClientRect();
+      introBridge.setTarget({
+        x: r.left + W / 2 + Math.cos(ang) * off,
+        y: r.top + H / 2 + Math.sin(ang) * off,
+        a: ((sa * ca) / den) * pxPerTan,
+        b: (sa / Math.sqrt(den)) * pxPerTan,
+        angle: ang,
+      });
     }
 
     layout();
@@ -984,7 +1008,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       const vh = window.innerHeight || L.H;
       if (rect.bottom < -40 || rect.top > vh + 40) return;
 
-      const tIntro = prefersReducedMotion ? 10 : texReady ? (now - tLoad) / 1000 : 0;
+      const tIntro = revealing ? (prefersReducedMotion ? 10 : (now - tLoad) / 1000) : 0;
       const time = (now - t0) / 1000;
       const SH = stage.clientHeight || L.H;
       const u = Math.max(0, -rect.top / SH);
@@ -1019,7 +1043,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
         (cur as any)[key] += ((tg as any)[key] - (cur as any)[key]) * kf;
       }
 
-      const rev = sm(0, 2.4, tIntro);
+      const rev = sm(0, introDriven ? 1.6 : 2.4, tIntro);
       const netIn = sm(2.0, 3.6, tIntro);
       const draw = sm(2.2, 4.4, tIntro);
       const settle = 1 - Math.pow(1 - Math.min(1, tIntro / 5.5), 3);
@@ -1038,7 +1062,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       root.rotation.y = pmx * 0.08;
       root.rotation.x = pmy * 0.05 + pitch;
       root.position.set(L.gx, L.gy, 0);
-      root.scale.setScalar(L.gs * (0.93 + 0.07 * rev) * (1 - 0.05 * (1 - cur.fade)));
+      root.scale.setScalar(L.gs * (1 - 0.05 * (1 - cur.fade)));
 
       earthMat.uniforms.uReveal.value = rev;
       earthMat.uniforms.uFade.value = cur.fade;
@@ -1115,6 +1139,8 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       alive = false;
       cancelAnimationFrame(raf);
       clearTimeout(safetyTimer);
+      unsubIntro();
+      introBridge.clearGlobe();
       if (ro) ro.disconnect();
       window.removeEventListener('resize', layout);
       canvas.removeEventListener('pointerdown', onDown);
@@ -1151,6 +1177,8 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
 
       {/* Subtle interaction cue in bottom right */}
       <div
+        data-intro-reveal
+        style={{ '--intro-delay': '0.9s' } as React.CSSProperties}
         className="absolute right-6 bottom-8 hidden lg:flex items-center gap-2.5 text-[11px] tracking-widest text-[#8C96A6] pointer-events-none select-none uppercase font-mono"
       >
         <span className="w-1.5 h-1.5 rounded-full bg-[#8CC8D8]/70 animate-pulse" />

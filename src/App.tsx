@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Navbar } from './components/Navbar';
 import { HomePage } from './pages/HomePage';
 import { SolutionsPage } from './pages/SolutionsPage';
@@ -13,7 +13,7 @@ import { AboutPage } from './pages/AboutPage';
 import { ContactSection } from './components/ContactSection';
 import { Footer } from './components/Footer';
 import { BriefingModal } from './components/BriefingModal';
-import { IntroVideo } from './components/IntroVideo';
+import { LogoIntro } from './components/LogoIntro';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<string>('home');
@@ -59,14 +59,14 @@ export default function App() {
     setBriefingModalOpen(false);
   };
 
-  const handleVideoEnd = () => {
+  const handleIntroComplete = useCallback(() => {
     setShowIntro(false);
-  };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#05070B] text-[#E9EDF3] selection:bg-[#8CC8D8]/20 selection:text-white flex flex-col justify-between">
-      {/* Intro Video */}
-      {showIntro && <IntroVideo onVideoEnd={handleVideoEnd} />}
+      {/* Logo intro: the mark's blue dot zooms in and becomes the Earth */}
+      {showIntro && <LogoIntro onComplete={handleIntroComplete} />}
 
       {/* Top Navbar */}
       <Navbar

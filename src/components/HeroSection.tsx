@@ -15,7 +15,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   return (
     <div className="min-h-screen relative flex items-center pt-24 pb-16">
       <div className="w-full max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-14">
-        <div className="max-w-[760px] pointer-events-auto">
+        <div
+          data-intro-reveal
+          style={{ '--intro-delay': '0.15s' } as React.CSSProperties}
+          className="max-w-[760px] pointer-events-auto"
+        >
           {/* Eyebrow */}
           <div className="flex items-center gap-3.5 mb-7">
             <span
@@ -69,6 +73,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       {/* Scroll indicator cue */}
       <div
         aria-hidden="true"
+        data-intro-reveal
+        style={{ '--intro-delay': '0.9s' } as React.CSSProperties}
         className="absolute left-5 sm:left-8 lg:left-14 bottom-8 hidden sm:flex items-center gap-3.5 text-[11px] tracking-[0.28em] text-[#8C96A6] select-none font-mono"
       >
         <span className="block w-9 h-[1px] bg-[#AEB7C3] animate-omav-cue" />
