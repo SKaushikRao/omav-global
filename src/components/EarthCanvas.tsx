@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { introBridge } from '../lib/introBridge';
+import { introBridge, K, TL } from '../lib/introBridge';
+import { LogoIntro } from './LogoIntro';
 
 interface EarthCanvasProps {
   accentColor?: string;
@@ -33,7 +34,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       renderer = new THREE.WebGLRenderer({
         canvas,
         antialias: true,
-        alpha: false,
+        alpha: true,
         powerPreference: 'high-performance',
       });
     } catch {
@@ -43,13 +44,17 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     renderer.setPixelRatio(dpr);
-    renderer.setClearColor(0x05070b, 1);
+    renderer.setClearColor(0x000000, 0);
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 60);
     camera.position.set(0, 0, 4.4);
 
-    const SUN = new THREE.Vector3(-0.95, 0.25, 0.18).normalize();
+    // One key light. It starts where the emblem's blue centre has its highlight
+    // (upper left) and travels with the intro camera to the hero's side light.
+    const SUN_H = new THREE.Vector3(-0.95, 0.25, 0.18).normalize();
+    const SUN_I = new THREE.Vector3(-0.42, 0.42, 0.8).normalize();
+    const SUN = SUN_H.clone();
     const accent = new THREE.Color(accentColor);
     const silver = new THREE.Color('#DCE3EB');
     const TILT = 0.46;
@@ -67,29 +72,17 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       uBeam: { value: 0 },
     };
 
-    // Textures loader. While the logo intro is running, the reveal waits for
-    // the logo's blue dot to land on the globe.
+    // Textures loader. The logo intro holds its dive until the Earth is ready.
     let texReady = false;
-    let revealing = false;
     let tLoad = 0;
-    const introDriven = introBridge.active;
-
-    const beginReveal = () => {
-      if (revealing || !texReady) return;
-      if (introBridge.active && !introBridge.revealed) return;
-      revealing = true;
-      tLoad = performance.now();
-    };
 
     const markReady = () => {
       if (texReady) return;
       texReady = true;
+      tLoad = performance.now();
       setIsLoaded(true);
-      introBridge.setReady();
-      beginReveal();
+      introBridge.setEarthReady();
     };
-
-    const unsubIntro = introBridge.subscribe(beginReveal);
 
     const mgr = new THREE.LoadingManager();
     mgr.onLoad = markReady;
@@ -97,7 +90,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
     const loader = new THREE.TextureLoader(mgr);
     const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
 
-    const loadTex = (path: string) => {
+    const loadTex = (path: string, wrap = false) => {
       const t = loader.load(
         path,
         () => {},
@@ -106,19 +99,23 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
         markReady
       );
       t.anisotropy = aniso;
+      if (wrap) t.wrapS = THREE.RepeatWrapping;
       return t;
     };
 
     const URL_DAY = '/assets/aistudio/2419145b1a56f93908364cdba80a4980_af3c5cdd.jpg';
     const URL_NIGHT = '/assets/aistudio/3b759647416f7940961fc69f639ab848_48c6f763.jpg';
     const URL_SPEC = '/assets/aistudio/616359cbb216d7811129f71760995474_5a027277.jpg';
+    const URL_WATER = '/assets/aistudio/a64b4424f88198be764305fdc0d57f25.jpg';
+    const URL_CLOUD = '/assets/aistudio/c12e8676a1ae56631d204355369938bc.jpg';
 
     const dayTex = loadTex(URL_DAY);
     const nightTex = loadTex(URL_NIGHT);
-    const specTex = loadTex(URL_SPEC);
+    const waterTex = loadTex(URL_WATER);
+    const cloudTex = loadTex(URL_CLOUD, true);
 
     // Fallback safety timeout for texture readiness
-    const safetyTimer = setTimeout(markReady, 2500);
+    const safetyTimer = setTimeout(markReady, 6000);
 
     const root = new THREE.Group();
     scene.add(root);
@@ -145,15 +142,31 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
     const UV_VS =
       'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
 
-    // Earth Shader Material
+    // Earth Shader Material. During the intro it starts as the emblem's flat blue
+    // centre (the same SVG radial gradient, evaluated in screen space so the
+    // hand-over is invisible), gains volume, then resolves into the Earth.
     const earthMat = new THREE.ShaderMaterial({
       uniforms: {
         dayMap: { value: dayTex },
         nightMap: { value: nightTex },
-        specMap: { value: specTex },
+        waterMap: { value: waterTex },
+        cloudMap: { value: cloudTex },
         uSun: { value: SUN },
         uReveal: { value: 0 },
         uFade: { value: 1 },
+        uDepth: { value: 1 },
+        uEarth: { value: 1 },
+        uLand: { value: 1 },
+        uCloud: { value: 1 },
+        uNight: { value: 1 },
+        uExpo: { value: 1 },
+        uCloudShift: { value: 0 },
+        uDotC: { value: new THREE.Vector2(0, 0) },
+        uDotR: { value: 1 },
+        uRes: { value: new THREE.Vector4(1, 1, 1, 1) },
+        uS0: { value: new THREE.Color('#8090F0') },
+        uS1: { value: new THREE.Color('#3A48B6') },
+        uS2: { value: new THREE.Color('#171D5E') },
       },
       vertexShader: `
         varying vec2 vUv;
@@ -170,45 +183,86 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       fragmentShader: `
         uniform sampler2D dayMap;
         uniform sampler2D nightMap;
-        uniform sampler2D specMap;
+        uniform sampler2D waterMap;
+        uniform sampler2D cloudMap;
         uniform vec3 uSun;
-        uniform float uReveal;
         uniform float uFade;
+        uniform float uReveal;
+        uniform float uDepth;
+        uniform float uEarth;
+        uniform float uLand;
+        uniform float uCloud;
+        uniform float uNight;
+        uniform float uExpo;
+        uniform float uCloudShift;
+        uniform vec2 uDotC;
+        uniform float uDotR;
+        uniform vec4 uRes;
+        uniform vec3 uS0;
+        uniform vec3 uS1;
+        uniform vec3 uS2;
         varying vec2 vUv;
         varying vec3 vN;
         varying vec3 vW;
+
+        vec3 grad(float t){
+          t = clamp(t, 0.0, 1.0);
+          return t < 0.52 ? mix(uS0, uS1, t / 0.52) : mix(uS1, uS2, (t - 0.52) / 0.48);
+        }
+        // SVG radial gradient (cx .4, cy .34, r .72, focus .36/.30)
+        float focalT(vec2 b){
+          vec2 d = b - vec2(0.36, 0.30);
+          vec2 e = vec2(0.04, 0.04);
+          float a = dot(e, e) - 0.5184;
+          float de = dot(d, e);
+          return (de - sqrt(max(de * de - a * dot(d, d), 0.0))) / a;
+        }
 
         void main(){
           vec3 n = normalize(vN);
           vec3 v = normalize(cameraPosition - vW);
           float ndl = dot(n, uSun);
+          float nv = max(dot(n, v), 0.0);
 
+          vec2 css = vec2(gl_FragCoord.x * uRes.x / uRes.z, uRes.y - gl_FragCoord.y * uRes.y / uRes.w);
+          vec2 bb = (css - (uDotC - vec2(uDotR))) / (2.0 * uDotR);
+          vec3 col = grad(focalT(bb));
+          float limb = pow(1.0 - nv, 2.0);
+          vec3 hs = normalize(uSun + v);
+          vec3 vol = col * (1.0 - 0.5 * limb) + uS0 * 0.22 * pow(max(dot(n, hs), 0.0), 28.0) + vec3(0.10, 0.14, 0.32) * pow(1.0 - nv, 4.0) * 0.6;
+          col = mix(col, vol, uDepth);
+
+          float water = texture2D(waterMap, vUv).r;
           vec3 day = texture2D(dayMap, vUv).rgb;
           float l = dot(day, vec3(0.299, 0.587, 0.114));
-          vec3 dayCol = mix(vec3(l), day, 0.5) * vec3(0.8, 0.9, 1.0);
-          dayCol = dayCol / (1.0 + dayCol * 0.9) * 1.35;
-
+          vec3 landCol = mix(vec3(l), day, 0.5) * vec3(0.8, 0.9, 1.0);
+          landCol = landCol / (1.0 + landCol * 0.9) * 1.35;
+          vec3 ocean = vec3(0.030, 0.070, 0.160) + day * vec3(0.03, 0.05, 0.09);
+          vec3 landStage = mix(ocean * 1.8 + vec3(0.012, 0.016, 0.022), landCol, uLand);
+          vec3 surf = mix(landStage, ocean, water);
           float lit = smoothstep(-0.1, 0.6, ndl);
-          vec3 col = dayCol * (0.02 + 0.5 * lit);
+          vec3 ec = surf * (0.02 + 0.5 * lit) * mix(1.0, 1.55, water) * uExpo;
+          float cl = texture2D(cloudMap, vUv + vec2(uCloudShift, 0.0)).r * uCloud;
+          ec = mix(ec, vec3(0.80, 0.84, 0.90) * (0.03 + 0.62 * lit) * uExpo, cl * 0.5);
 
           vec3 night = texture2D(nightMap, vUv).rgb;
           float dark = 1.0 - smoothstep(-0.22, 0.12, ndl);
-          col += pow(night, vec3(1.25)) * vec3(1.0, 0.85, 0.62) * 1.7 * dark;
+          ec += pow(night, vec3(1.25)) * vec3(1.0, 0.85, 0.62) * 1.7 * dark * uNight * (1.0 - cl * 0.7);
 
-          float spec = texture2D(specMap, vUv).r;
           vec3 h = normalize(uSun + v);
-          col += spec * pow(max(dot(n, h), 0.0), 48.0) * 0.32 * vec3(0.72, 0.86, 1.0) * lit;
+          ec += water * pow(max(dot(n, h), 0.0), 48.0) * 0.32 * vec3(0.72, 0.86, 1.0) * lit * uNight;
 
-          float fres = pow(1.0 - max(dot(n, v), 0.0), 2.6);
-          col += vec3(0.42, 0.68, 0.84) * fres * (0.08 + 0.42 * smoothstep(-0.35, 0.6, ndl));
+          float fres = pow(1.0 - nv, 2.6);
+          ec += vec3(0.42, 0.68, 0.84) * fres * (0.08 + 0.42 * smoothstep(-0.35, 0.6, ndl));
 
-          gl_FragColor = vec4(col * uReveal, uFade);
+          col = mix(col, ec * uReveal, uEarth);
+          gl_FragColor = vec4(col, uFade);
         }
       `,
       transparent: true,
     });
 
-    const earth = new THREE.Mesh(new THREE.SphereGeometry(1, 96, 96), earthMat);
+    const earth = new THREE.Mesh(new THREE.SphereGeometry(1, 128, 96), earthMat);
     earth.renderOrder = 2;
     spin.add(earth);
 
@@ -970,19 +1024,8 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
         L.ny = hh * 0.22;
       }
 
-      // Publish camera + resting globe placement for the logo intro
-      const r = stage.getBoundingClientRect();
-      introBridge.setGlobe(
-        {
-          left: r.left,
-          top: r.top,
-          W,
-          H,
-          camZ: camera.position.z,
-          tanHalf: Math.tan((camera.fov * Math.PI) / 360),
-        },
-        { x: L.gx, y: L.gy, s: L.gs }
-      );
+      // Resting globe placement is the intro camera's destination
+      introBridge.setLayout({ gs: L.gs, gx: L.gx, gy: L.gy, hh, W, H });
     }
 
     layout();
@@ -1056,6 +1099,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
 
     const t0 = performance.now();
     let last = t0;
+    let cleared = true;
 
     function frame(now: number) {
       if (!alive) return;
@@ -1066,11 +1110,24 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       if (document.hidden) return;
       if (!story || !stage) return;
 
+      // Advance the shared intro clock (LogoIntro may already have this frame)
+      introBridge.frame(now);
+      const introOn = introBridge.mode !== 'off';
+      const it = introBridge.clock(now);
+      if (introOn && it < TL.T0 - 0.05) {
+        if (!cleared) {
+          renderer.clear();
+          cleared = true;
+        }
+        return;
+      }
+      cleared = false;
+
       const rect = story.getBoundingClientRect();
       const vh = window.innerHeight || L.H;
       if (rect.bottom < -40 || rect.top > vh + 40) return;
 
-      const tIntro = revealing ? (prefersReducedMotion ? 10 : (now - tLoad) / 1000) : 0;
+      const tIntro = texReady ? (prefersReducedMotion ? 10 : (now - tLoad) / 1000) : 0;
       const time = (now - t0) / 1000;
       const SH = stage.clientHeight || L.H;
       const u = Math.max(0, -rect.top / SH);
@@ -1105,11 +1162,9 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
         (cur as any)[key] += ((tg as any)[key] - (cur as any)[key]) * kf;
       }
 
-      // While the logo intro runs, the globe flies inside the logo's blue dot
-      const ip = introBridge.poseAt(now);
-      const rev = ip ? ip.mix : sm(0, introDriven ? 1.6 : 2.4, tIntro);
-      const netIn = sm(2.0, 3.6, tIntro);
-      const draw = sm(2.2, 4.4, tIntro);
+      const rev = introOn ? 1 : sm(0, 2.4, tIntro);
+      const netIn = introOn ? sm(TL.NET0, TL.NET1, it) : sm(2.0, 3.6, tIntro);
+      const draw = introOn ? sm(TL.NET0 + 0.1, TL.NET1 + 0.7, it) : sm(2.2, 4.4, tIntro);
       const settle = 1 - Math.pow(1 - Math.min(1, tIntro / 5.5), 3);
 
       if (!dragging) {
@@ -1122,23 +1177,72 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       pmx += (mx - pmx) * pk;
       pmy += (my - pmy) * pk;
 
-      spin.rotation.y = BASE + time * (prefersReducedMotion ? 0.008 : 0.028) - (1 - settle) * 0.8 + yaw;
-      root.rotation.y = pmx * 0.08;
-      root.rotation.x = pmy * 0.05 + pitch;
-      if (ip) {
-        root.position.set(ip.pose.x, ip.pose.y, 0);
-        root.scale.setScalar(ip.pose.s);
-      } else {
-        root.position.set(L.gx, L.gy, 0);
-        root.scale.setScalar(L.gs * (1 - 0.05 * (1 - cur.fade)));
+      let gx = L.gx;
+      let gy = L.gy;
+      let gsc = L.gs * (0.93 + 0.07 * rev) * (1 - 0.05 * (1 - cur.fade));
+      let eFade = 1;
+      let atmoK = 1;
+      let kPar = 1;
+      let sunK = 1;
+      let expo = 1;
+      let depth = 1;
+      let earthK = 1;
+      let landK = 1;
+      let cloudK = 1;
+      let nightK = 1;
+      let rotOff = -(1 - settle) * 0.8;
+      const cam = introBridge.cam;
+      if (introOn) {
+        // The emblem's blue centre gains volume and resolves into the Earth while
+        // the shared camera carries it to its hero position
+        const smr = K.smoother;
+        eFade = K.seg(it, TL.T0, TL.FADE1);
+        depth = smr(TL.DEPTH0, TL.DEPTH1, it);
+        earthK = sm(TL.EARTH0, TL.EARTH1, it);
+        landK = sm(TL.LAND0, TL.LAND1, it);
+        cloudK = sm(TL.CLOUD0, TL.CLOUD1, it);
+        nightK = smr(TL.NIGHT0, TL.NIGHT1, it);
+        atmoK = smr(TL.ATMO0, TL.ATMO1, it);
+        if (it < TL.CAM1 && introBridge.dot) {
+          const Hd = stage.clientHeight || 1;
+          const Wd = stage.clientWidth || 1;
+          const hh = Math.tan((camera.fov * Math.PI) / 360) * camera.position.z;
+          const wpp = (2 * hh) / Hd;
+          gx = (cam.x - Wd / 2) * wpp;
+          gy = -(cam.y - Hd / 2) * wpp;
+          gsc = Math.max(1e-4, cam.r * wpp);
+        }
+        const cu = it < TL.CAM1 ? cam.u : 1;
+        kPar = K.seg(it, TL.CAM1, TL.CAM1 + 1.2);
+        rotOff = -0.24 * (1 - cu);
+        sunK = cu;
+        expo = 1 + 0.7 * (1 - cu);
       }
+      SUN.copy(SUN_I).lerp(SUN_H, sunK).normalize();
 
-      earthMat.uniforms.uReveal.value = rev;
-      earthMat.uniforms.uFade.value = cur.fade;
+      spin.rotation.y = BASE + time * (prefersReducedMotion ? 0.008 : 0.028) + rotOff + yaw;
+      root.rotation.y = pmx * 0.08 * kPar;
+      root.rotation.x = (pmy * 0.05 + pitch) * kPar;
+      root.position.set(gx, gy, 0);
+      root.scale.setScalar(gsc);
+
+      const EU = earthMat.uniforms;
+      EU.uFade.value = cur.fade * eFade;
+      EU.uReveal.value = rev;
+      EU.uDepth.value = depth;
+      EU.uEarth.value = earthK;
+      EU.uLand.value = landK;
+      EU.uCloud.value = cloudK;
+      EU.uNight.value = nightK;
+      EU.uExpo.value = expo;
+      EU.uCloudShift.value = time * 0.0009;
+      EU.uDotC.value.set(cam.x, cam.y);
+      EU.uDotR.value = Math.max(1, cam.r);
+      EU.uRes.value.set(stage.clientWidth || 1, stage.clientHeight || 1, renderer.domElement.width || 1, renderer.domElement.height || 1);
       earth.visible = cur.fade > 0.004;
-      earthMat.depthWrite = cur.fade > 0.55;
-      atmoMat.uniforms.uA.value = rev * cur.fade;
-      atmo.visible = earth.visible;
+      earthMat.depthWrite = cur.fade > 0.55 && eFade > 0.6;
+      atmoMat.uniforms.uA.value = rev * cur.fade * atmoK;
+      atmo.visible = earth.visible && atmoK > 0.001;
 
       const na = netIn * cur.net;
       const show = na > 0.002;
@@ -1226,8 +1330,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       alive = false;
       cancelAnimationFrame(raf);
       clearTimeout(safetyTimer);
-      unsubIntro();
-      introBridge.clearGlobe();
+      introBridge.setLayout(null);
       if (ro) ro.disconnect();
       window.removeEventListener('resize', layout);
       canvas.removeEventListener('pointerdown', onDown);
@@ -1246,6 +1349,9 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       className="sticky top-0 h-[100vh] w-full overflow-hidden z-0 bg-[#05070B] pointer-events-auto"
       style={{ touchAction: 'pan-y' }}
     >
+      {/* Logo intro: the emblem builds here, beneath the globe */}
+      <LogoIntro />
+
       <canvas
         ref={canvasRef}
         aria-label="Interactive 3D Earth and Global Intelligence Network"
@@ -1255,7 +1361,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       {/* Atmospheric dark gradient scrims so text remains 100% legible */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 pointer-events-none bg-gradient-to-r from-[#05070B]/85 via-[#05070B]/40 to-transparent max-md:bg-gradient-to-t max-md:from-[#05070B] max-md:via-[#05070B]/60 max-md:to-transparent"
+        className="omav-scrim absolute inset-0 pointer-events-none bg-gradient-to-r from-[#05070B]/85 via-[#05070B]/40 to-transparent max-md:bg-gradient-to-t max-md:from-[#05070B] max-md:via-[#05070B]/60 max-md:to-transparent"
       />
       <div
         aria-hidden="true"
@@ -1265,7 +1371,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       {/* Subtle interaction cue in bottom right */}
       <div
         data-intro-reveal
-        style={{ '--intro-delay': '0.9s' } as React.CSSProperties}
+        style={{ '--intro-delay': '2s' } as React.CSSProperties}
         className="absolute right-6 bottom-8 hidden lg:flex items-center gap-2.5 text-[11px] tracking-widest text-[#8C96A6] pointer-events-none select-none uppercase font-mono"
       >
         <span className="w-1.5 h-1.5 rounded-full bg-[#8CC8D8]/70 animate-pulse" />

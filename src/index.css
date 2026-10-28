@@ -24,21 +24,50 @@
   font-family: 'Tiro Devanagari Sanskrit', 'Noto Serif Devanagari', Georgia, serif;
 }
 
-/* Logo intro: page chrome stays hidden until the Earth takes over */
+/* Logo intro: page chrome stays hidden until the Earth takes over (.omav-go),
+   then rises in on a staggered delay */
+@keyframes omavRise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
 html.omav-intro-lock {
   overflow: hidden;
 }
 html.omav-intro [data-intro-reveal] {
   opacity: 0;
-  transform: translateY(14px);
 }
-html.omav-intro [data-intro-reveal='fade'] {
-  transform: none;
+html.omav-intro.omav-go [data-intro-reveal] {
+  animation: omavRise 1.6s cubic-bezier(0.16, 0.8, 0.2, 1) var(--intro-delay, 0s) forwards;
 }
-html.omav-intro-out [data-intro-reveal] {
-  transition:
-    opacity 1.2s cubic-bezier(0.22, 0.7, 0.2, 1) var(--intro-delay, 0s),
-    transform 1.4s cubic-bezier(0.22, 0.7, 0.2, 1) var(--intro-delay, 0s);
+html.omav-intro .omav-scrim {
+  transition: opacity 1.6s ease 0.2s;
+}
+html.omav-intro:not(.omav-go) .omav-scrim {
+  opacity: 0;
+}
+html.omav-intro #how,
+html.omav-intro main section:not(#top),
+html.omav-intro footer {
+  transition: opacity 1.2s ease 0.6s;
+}
+html.omav-intro:not(.omav-go) #how,
+html.omav-intro:not(.omav-go) main section:not(#top),
+html.omav-intro:not(.omav-go) footer {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  html.omav-intro [data-intro-reveal] {
+    animation: none;
+    opacity: 1;
+  }
 }
 
 /* Custom scrollbar */
