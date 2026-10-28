@@ -19,6 +19,7 @@ import {
   PerspectiveFrustum,
   PointPrimitiveCollection,
   ScreenSpaceEventHandler,
+  SceneTransforms,
   ScreenSpaceEventType,
   SingleTileImageryProvider,
   TextureMagnificationFilter,
@@ -30,7 +31,8 @@ import {
   WebMercatorTilingScheme,
 } from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
-import { Crosshair, Expand, Minus, Plus, RotateCcw, Shrink, SlidersHorizontal, X } from 'lucide-react';
+import { Crosshair, Expand, Minus, Moon, Plus, Shrink, SlidersHorizontal, Sun, X } from 'lucide-react';
+import RubberSegment from '../ui/RubberSegment';
 import {
   buildLut,
   cellAreaKm2,
@@ -104,6 +106,11 @@ export interface GlobeView {
   lon: number;
   roll: number; // screen angle of the north axis from "up", radians (clockwise)
   sun: [number, number, number]; // key light, camera space
+  // Where the story Earth sits on screen (centre offset and radius, px); the
+  // Cesium Earth tracks it while the two cross-fade
+  dx?: number;
+  dy?: number;
+  r?: number;
 }
 
 export interface GlobeApi {
@@ -196,6 +203,12 @@ export default function PopulationGlobe({
   const haloOn = useRef(true);
   const homeRef = useRef(home);
   homeRef.current = home;
+  const suspendedRef = useRef(suspended);
+  suspendedRef.current = suspended;
+  const boxRef = useRef<HTMLDivElement | null>(null);
+  const boxOffset = useRef({ x: 0, y: 0 });
+  const readoutRef = useRef<HTMLDivElement | null>(null);
+  const readoutPos = useRef<Cartesian3 | null>(null);
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
   // Values the per-frame hand-over reads
@@ -205,15 +218,18 @@ export default function PopulationGlobe({
   const [cities, setCities] = useState<City[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showPop, setShowPop] = useState(true);
-  const [opacity, setOpacity] = useState(0.85);
-  const [minIdx, setMinIdx] = useState(0);
+  // Density always shows at full strength, with no threshold
+  const opacity = 1;
+  const minIdx = 0;
   const [nightLights, setNightLights] = useState(true);
   const [nightAvailable, setNightAvailable] = useState(true);
   const [basemap, setBasemap] = useState<Basemap>('styled');
   const [showCities, setShowCities] = useState(true);
   const [readout, setReadout] = useState<Readout | null>(null);
   const [active, setActive] = useState(false); // wheel/touch go to the globe
-  const [panelOpen, setPanelOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement | null>(null);
+  const moreBtnRef = useRef<HTMLButtonElement | null>(null);
   const [coarse] = useState(() => !!window.matchMedia?.('(pointer: coarse)').matches);
 
   live.current = { opacity, showPop, nightLights, basemap };
@@ -385,6 +401,38 @@ export default function PopulationGlobe({
     };
     scene.preRender.addEventListener(onPreRender);
 
+    // The readout card sits beside its point on the globe and follows it
+    const win = new Cartesian2();
+    const toEye = new Cartesian3();
+    const onPostRender = () => {
+      const card = readoutRef.current;
+      const pos = readoutPos.current;
+      if (!card || !pos) return;
+      const p = SceneTransforms.worldToWindowCoordinates(scene, pos, win);
+      Cartesian3.subtract(camera.positionWC, pos, toEye);
+      const facing = Cartesian3.dot(toEye, pos) > 0;
+      if (!p || !facing) {
+        card.style.opacity = '0';
+        card.style.pointerEvents = 'none';
+        return;
+      }
+      const stageW = wrapRef.current?.clientWidth || window.innerWidth;
+      const stageH = wrapRef.current?.clientHeight || window.innerHeight;
+      const x = p.x + boxOffset.current.x;
+      const y = p.y + boxOffset.current.y;
+      const w = card.offsetWidth;
+      const h = card.offsetHeight;
+      let left = x + 22;
+      if (left + w > stageW - 16) left = x - 22 - w;
+      left = Math.max(16, left);
+      const top = Math.min(Math.max(88, y - h / 2), stageH - h - 96);
+      card.style.left = `${left.toFixed(0)}px`;
+      card.style.top = `${top.toFixed(0)}px`;
+      card.style.opacity = '1';
+      card.style.pointerEvents = 'auto';
+    };
+    scene.postRender.addEventListener(onPostRender);
+
     // Follow the intro Earth until the user takes over
     apiRef.current = {
       follow: (v) => {
@@ -392,18 +440,32 @@ export default function PopulationGlobe({
         const prev = lastView.current;
         lastView.current = v;
         if (touched.current || flying.current) return;
+        const tracking = suspendedRef.current && v.r !== undefined;
         // The idle drift is slow: skip frames where nothing visibly moved
         if (
           prev &&
           Math.abs(prev.lat - v.lat) < 0.04 &&
           Math.abs(prev.lon - v.lon) < 0.04 &&
-          Math.abs(prev.roll - v.roll) < 0.0007
+          Math.abs(prev.roll - v.roll) < 0.0007 &&
+          (!tracking || (Math.abs((prev.dx ?? 0) - (v.dx ?? 0)) < 0.5 && Math.abs((prev.dy ?? 0) - (v.dy ?? 0)) < 0.5 && Math.abs((prev.r ?? 0) - (v.r ?? 0)) < 0.5))
         ) {
           lastView.current = prev;
           return;
         }
         const H = scene.canvas.clientHeight || 1;
-        const r = homeRef.current?.r ?? H * 0.42;
+        let r = homeRef.current?.r ?? H * 0.42;
+        if (tracking) {
+          // In the story: sit exactly where the story Earth is
+          r = v.r!;
+          const box = boxRef.current;
+          if (box) {
+            box.style.transition = 'none';
+            box.style.transform = `translate(${v.dx!.toFixed(1)}px, ${v.dy!.toFixed(1)}px)`;
+            boxOffset.current = { x: v.dx!, y: v.dy! };
+          }
+          const home = homeRef.current;
+          if (haloRef.current && home) haloRef.current.style.transform = `translate(-50%, -50%) scale(${(r / home.r).toFixed(4)})`;
+        }
         camera.setView(viewAt(v.lat, v.lon, v.roll, heightForRadius(r, H)));
         scene.requestRender();
       },
@@ -439,6 +501,7 @@ export default function PopulationGlobe({
       apiRef.current = null;
       offProgress();
       scene.preRender.removeEventListener(onPreRender);
+      scene.postRender.removeEventListener(onPostRender);
       window.clearTimeout(readyTimer);
       viewer.destroy();
       viewerRef.current = null;
@@ -597,7 +660,7 @@ export default function PopulationGlobe({
         },
         label: {
           text: c.name,
-          font: '500 12px Geist, "Plus Jakarta Sans", system-ui, sans-serif',
+          font: '500 12px Archivo, system-ui, sans-serif',
           fillColor: Color.fromCssColorString('#E9EDF3'),
           outlineColor: Color.fromCssColorString('#05070B'),
           outlineWidth: 3,
@@ -631,6 +694,7 @@ export default function PopulationGlobe({
     const viewer = viewerRef.current;
     if (!viewer) return;
     if (pinRef.current) viewer.entities.remove(pinRef.current);
+    readoutPos.current = Cartesian3.fromDegrees(lon, lat);
     pinRef.current = viewer.entities.add({
       position: Cartesian3.fromDegrees(lon, lat),
       point: {
@@ -647,6 +711,7 @@ export default function PopulationGlobe({
   const clearReadout = useCallback(() => {
     queryId.current++;
     setReadout(null);
+    readoutPos.current = null;
     const viewer = viewerRef.current;
     if (viewer && pinRef.current) {
       viewer.entities.remove(pinRef.current);
@@ -738,15 +803,36 @@ export default function PopulationGlobe({
     if (coarse && !active) setActive(true);
   };
 
+  // Scrolling into the story: close everything and re-align with the story Earth
   useEffect(() => {
     if (!suspended) return;
     setActive(false);
-    setPanelOpen(false);
+    setMoreOpen(false);
+    touched.current = false;
+    flying.current = false;
   }, [suspended]);
 
+  // "More" closes on Escape or a click outside it
   useEffect(() => {
-    if (explore) setPanelOpen(!coarse);
-  }, [explore, coarse]);
+    if (!moreOpen) return;
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (moreRef.current?.contains(t) || moreBtnRef.current?.contains(t)) return;
+      setMoreOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMoreOpen(false);
+        moreBtnRef.current?.focus();
+      }
+    };
+    window.addEventListener('pointerdown', onDown, true);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('pointerdown', onDown, true);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [moreOpen]);
 
   // -------------------------------------------------------------- camera
   const zoom = (dir: 1 | -1) => {
@@ -781,16 +867,32 @@ export default function PopulationGlobe({
 
   // ---------------------------------------------------------------- view
   const top = cities.slice(0, 8);
-  const minDensity = MIN_STEPS[minIdx];
-  const shift = home && !explore ? `translate(${home.dx}px, ${home.dy}px)` : 'translate(0px, 0px)';
   const showChrome = !suspended;
+
+  // Hero framing (or centred, when exploring); in the story, follow() moves the box
+  useEffect(() => {
+    const box = boxRef.current;
+    if (!box || suspended) return;
+    const x = home && !explore ? home.dx : 0;
+    const y = home && !explore ? home.dy : 0;
+    box.style.transition = '';
+    box.style.transform = `translate(${x}px, ${y}px)`;
+    boxOffset.current = { x, y };
+    if (haloRef.current) haloRef.current.style.transform = 'translate(-50%, -50%)';
+    viewerRef.current?.scene.requestRender();
+  }, [home, explore, suspended]);
+
+  // Place the readout as soon as it opens
+  useEffect(() => {
+    if (readout) viewerRef.current?.scene.requestRender();
+  }, [readout]);
 
   return (
     <div ref={wrapRef} className="absolute inset-0" onClick={onWrapClick}>
       {/* The viewer is centred on the globe's hero position (or the stage, when exploring) */}
       <div
+        ref={boxRef}
         className="absolute inset-0 transition-transform duration-[900ms] ease-[cubic-bezier(.22,.7,.2,1)]"
-        style={{ transform: shift }}
       >
         {/* Atmospheric halo, as on the intro Earth: brighter on the sunlit limb */}
         {home && (
@@ -813,121 +915,59 @@ export default function PopulationGlobe({
       </div>
 
       <div
-        className={`transition-opacity duration-500 ${showChrome ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`transition-opacity duration-300 ${showChrome ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       >
-        {/* Compact legend + entry to the controls */}
-        {!panelOpen && (
-          <div className="absolute z-10 right-4 sm:right-6 bottom-20 w-[248px] rounded-md border border-[#DCE4EE]/12 bg-[#05070B]/72 backdrop-blur-md p-3.5 text-[#E9EDF3]">
-            <div className="text-[10px] font-mono tracking-[0.2em] text-[#8C96A6] uppercase">
-              Population density 2020 · per km²
-            </div>
-            <Scale minDensity={minDensity} />
-            <div className="mt-3 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setPanelOpen(true)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 h-8 rounded-[3px] border border-[#DCE4EE]/15 text-[12px] text-[#E9EDF3] hover:border-[#DCE4EE]/40 cursor-pointer"
-              >
-                <SlidersHorizontal size={13} /> Controls
-              </button>
-              <button
-                type="button"
-                onClick={() => onExploreChange(!explore)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 h-8 rounded-[3px] bg-[#E9EDF3] text-[12px] font-medium text-[#05070B] hover:bg-white cursor-pointer"
-              >
-                {explore ? <Shrink size={13} /> : <Expand size={13} />} {explore ? 'Close' : 'Explore'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Full controls */}
-        {panelOpen && (
-          <aside
-            className="absolute z-10 right-3 sm:right-4 top-[84px] bottom-16 w-[300px] max-w-[calc(100%-24px)] flex flex-col rounded-md border border-[#DCE4EE]/12 bg-[#05070B]/84 backdrop-blur-md text-[#E9EDF3] max-md:top-auto max-md:h-[64%]"
-            aria-label="Globe controls"
-          >
-            <div className="flex items-start justify-between gap-3 px-4 pt-4 pb-3 border-b border-[#DCE4EE]/10">
-              <div>
-                <div className="text-[10.5px] font-mono tracking-[0.22em] text-[#8C96A6] uppercase">
-                  Population density · 2020
-                </div>
-                <div className="mt-1 text-sm text-[#AEB7C3]">People per km², 1 km grid</div>
+        {/* Dock: zoom, day/night and more, centred under the globe */}
+        <div
+          className="absolute z-10 bottom-6 -translate-x-1/2 transition-[left] duration-[900ms] ease-[cubic-bezier(.22,.7,.2,1)]"
+          style={{ left: home && !explore ? `calc(50% + ${home.dx}px)` : '50%' }}
+        >
+          {moreOpen && (
+            <div
+              ref={moreRef}
+              role="dialog"
+              aria-label="Globe options"
+              className="omav-pop surface reticle absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 w-[320px] max-w-[calc(100vw-32px)] max-h-[min(62vh,560px)] overflow-y-auto rounded-xl p-4 text-[13px] text-ice"
+            >
+              <div className="flex items-baseline justify-between">
+                <span className="font-display text-[13px] tracking-[0.04em]">Population density, 2020</span>
+                <span className="font-mono text-[10.5px] text-slate">people / km²</span>
               </div>
-              <button
-                type="button"
-                onClick={() => setPanelOpen(false)}
-                className="p-1 -m-1 text-[#8C96A6] hover:text-white cursor-pointer"
-                aria-label="Hide controls"
-              >
-                <X size={16} />
-              </button>
-            </div>
+              <Scale minDensity={0} />
 
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5 text-[13px]">
-              <Scale minDensity={minDensity} />
-
-              <div className="space-y-2.5">
-                <SectionLabel>Layers</SectionLabel>
-                <Toggle label="Population density" checked={showPop} onChange={setShowPop} />
-                <Toggle
-                  label="Night lights (NASA Black Marble)"
-                  checked={nightLights}
-                  onChange={setNightLights}
-                  disabled={!nightAvailable}
-                />
+              <div className="mt-4 space-y-2.5">
                 <Toggle label="Major cities" checked={showCities} onChange={setShowCities} />
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-[#AEB7C3]">Basemap</span>
-                  <div className="flex rounded-[3px] border border-[#DCE4EE]/15 overflow-hidden text-[12px]">
-                    {(['styled', 'satellite'] as Basemap[]).map((b) => (
-                      <button
-                        key={b}
-                        type="button"
-                        onClick={() => setBasemap(b)}
-                        className={`px-2.5 py-1 capitalize cursor-pointer ${
-                          basemap === b ? 'bg-[#E9EDF3] text-[#05070B]' : 'text-[#AEB7C3] hover:text-white'
-                        }`}
-                      >
-                        {b}
-                      </button>
-                    ))}
-                  </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-slate">Imagery</span>
+                  <RubberSegment
+                    size="sm"
+                    items={[
+                      { value: 'styled', label: 'Styled' },
+                      { value: 'satellite', label: 'Satellite' },
+                    ]}
+                    value={basemap}
+                    onChange={(v) => setBasemap(v as Basemap)}
+                    aria-label="Imagery"
+                  />
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <Slider
-                  label="Density opacity"
-                  value={`${Math.round(opacity * 100)}%`}
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  current={opacity}
-                  onChange={setOpacity}
-                  disabled={!showPop}
-                />
-                <Slider
-                  label="Show areas above"
-                  value={minDensity ? `${fmtInt(minDensity)} /km²` : 'All'}
-                  min={0}
-                  max={MIN_STEPS.length - 1}
-                  step={1}
-                  current={minIdx}
-                  onChange={(v) => setMinIdx(Math.round(v))}
-                  disabled={!showPop}
-                />
-              </div>
-
-              <div>
-                <SectionLabel>Go to</SectionLabel>
+              <div className="mt-4 pt-4 border-t border-hairline">
+                <div className="font-mono text-[10.5px] text-slate">Go to</div>
                 <div className="mt-2 flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={resetView}
+                    className="h-7 px-2.5 rounded-[7px] text-[12px] text-abyss bg-ice/90 hover:bg-ice transition-colors duration-150 cursor-pointer"
+                  >
+                    Home view
+                  </button>
                   {REGIONS.map((r) => (
                     <button
                       key={r.id}
                       type="button"
                       onClick={() => flyTo(r.lon, r.lat, r.h)}
-                      className="px-2.5 py-1 rounded-[3px] border border-[#DCE4EE]/12 text-[12px] text-[#AEB7C3] hover:text-white hover:border-[#DCE4EE]/30 cursor-pointer"
+                      className="h-7 px-2.5 rounded-[7px] text-[12px] text-ice/80 bg-ice/[0.05] hover:bg-ice/[0.1] hover:text-ice transition-colors duration-150 cursor-pointer"
                     >
                       {r.label}
                     </button>
@@ -936,19 +976,19 @@ export default function PopulationGlobe({
               </div>
 
               {top.length > 0 && (
-                <div>
-                  <SectionLabel>Most people within 50 km</SectionLabel>
-                  <ol className="mt-2 space-y-0.5">
+                <div className="mt-4 pt-4 border-t border-hairline">
+                  <div className="font-mono text-[10.5px] text-slate">Most people within 50 km</div>
+                  <ol className="mt-2">
                     {top.map((c, i) => (
                       <li key={c.name}>
                         <button
                           type="button"
                           onClick={() => selectCity(c)}
-                          className="w-full flex items-center gap-2.5 px-2 py-1.5 -mx-2 rounded-[3px] text-left hover:bg-[#DCE4EE]/5 cursor-pointer"
+                          className="w-full flex items-center gap-3 h-8 px-2 -mx-2 rounded-[7px] text-left hover:bg-ice/[0.05] transition-colors duration-150 cursor-pointer"
                         >
-                          <span className="w-4 text-[11px] font-mono text-[#8C96A6]">{i + 1}</span>
-                          <span className="flex-1 truncate text-[#E9EDF3]">{c.name}</span>
-                          <span className="font-mono text-[12px] text-[#8CC8D8]">{fmtCompact(c.pop50km)}</span>
+                          <span className="w-4 font-mono text-[11px] text-slate">{i + 1}</span>
+                          <span className="flex-1 truncate">{c.name}</span>
+                          <span className="font-mono text-[12px] text-signal">{fmtCompact(c.pop50km)}</span>
                         </button>
                       </li>
                     ))}
@@ -958,53 +998,74 @@ export default function PopulationGlobe({
 
               <button
                 type="button"
-                onClick={() => onExploreChange(!explore)}
-                className="w-full inline-flex items-center justify-center gap-2 h-9 rounded-[3px] bg-[#E9EDF3] text-[12.5px] font-medium text-[#05070B] hover:bg-white cursor-pointer"
+                onClick={() => {
+                  setMoreOpen(false);
+                  onExploreChange(!explore);
+                }}
+                className="btn btn-ghost btn-sm mt-4 w-full justify-center"
               >
                 {explore ? <Shrink size={14} /> : <Expand size={14} />}
-                {explore ? 'Close explorer' : 'Explore full screen'}
+                {explore ? 'Close full screen' : 'Explore full screen'}
               </button>
-
-              <p className="text-[11px] leading-relaxed text-[#8C96A6]">
-                Source: CIESIN / NASA SEDAC, Gridded Population of the World v4, 2020, at its native 30 arc-second
-                (≈1 km) grid. Coarser views show cell means. Imagery: Bing Maps via Cesium ion; night lights: NASA
-                Black Marble (VIIRS 2016) via NASA GIBS.
+              <p className="mt-3 text-[11px] leading-relaxed text-slate">
+                CIESIN / NASA SEDAC, Gridded Population of the World v4 (2020), native 1 km grid. Night lights: NASA
+                Black Marble. Imagery: Bing Maps via Cesium ion.
               </p>
             </div>
-          </aside>
-        )}
+          )}
 
-        {/* Zoom */}
-        <div
-          className={`absolute z-10 top-1/2 -translate-y-1/2 flex flex-col rounded-[3px] border border-[#DCE4EE]/15 bg-[#05070B]/75 backdrop-blur-md overflow-hidden ${
-            panelOpen ? 'right-[316px] max-md:right-3 max-md:top-[30%]' : 'right-4 sm:right-6'
-          }`}
-        >
-          <IconButton label="Zoom in" onClick={() => zoom(1)}>
-            <Plus size={16} />
-          </IconButton>
-          <IconButton label="Zoom out" onClick={() => zoom(-1)}>
-            <Minus size={16} />
-          </IconButton>
-          <IconButton label="Reset view" onClick={resetView}>
-            <RotateCcw size={15} />
-          </IconButton>
+          <div className="surface flex items-center gap-1.5 rounded-[14px] p-1.5">
+            <div className="flex rounded-[10px] bg-ice/[0.06] p-[3px]">
+              <DockButton label="Zoom out" onClick={() => zoom(-1)}>
+                <Minus size={15} />
+              </DockButton>
+              <DockButton label="Zoom in" onClick={() => zoom(1)}>
+                <Plus size={15} />
+              </DockButton>
+            </div>
+            <RubberSegment
+              size="md"
+              items={[
+                { value: 'day', label: 'Day', icon: <Sun size={13} /> },
+                { value: 'night', label: 'Night', icon: <Moon size={13} /> },
+              ]}
+              value={nightLights ? 'night' : 'day'}
+              onChange={(v) => setNightLights(v === 'night')}
+              aria-label="Night lights"
+              disabled={!nightAvailable}
+            />
+            <button
+              ref={moreBtnRef}
+              type="button"
+              aria-expanded={moreOpen}
+              aria-haspopup="dialog"
+              onClick={() => setMoreOpen((o) => !o)}
+              className={`h-9 inline-flex items-center gap-1.5 px-3 rounded-[10px] text-[13px] font-medium transition-colors duration-150 cursor-pointer ${
+                moreOpen ? 'bg-ice text-abyss' : 'bg-ice/[0.06] text-ice/80 hover:text-ice hover:bg-ice/[0.1]'
+              }`}
+            >
+              <SlidersHorizontal size={13} />
+              More
+            </button>
+          </div>
         </div>
 
         {/* Readout */}
         {readout && (
           <div
-            className={`absolute z-10 top-[84px] w-[280px] max-w-[calc(100%-24px)] rounded-md border border-[#DCE4EE]/12 bg-[#05070B]/86 backdrop-blur-md p-4 text-[#E9EDF3] ${
-              panelOpen ? 'right-[316px] max-md:right-3' : 'right-4 sm:right-6'
-            }`}
+            ref={readoutRef}
+            role="dialog"
+            aria-label="Location details"
+            className="omav-pop surface reticle absolute z-10 left-0 top-0 w-[280px] max-w-[calc(100%-32px)] rounded-xl p-4 text-ice transition-opacity duration-150"
+            style={{ opacity: 0 }}
           >
             <button
               type="button"
               onClick={clearReadout}
-              className="absolute right-3 top-3 text-[#8C96A6] hover:text-white cursor-pointer"
+              className="absolute right-3 top-3 grid place-items-center w-7 h-7 rounded-[7px] text-slate hover:text-ice hover:bg-ice/[0.06] cursor-pointer"
               aria-label="Close"
             >
-              <X size={15} />
+              <X size={14} />
             </button>
             {readout.kind === 'city' ? (
               <CityCard city={readout.city} rank={readout.rank} total={cities.length} />
@@ -1015,13 +1076,13 @@ export default function PopulationGlobe({
         )}
 
         {coarse && !inputOn && (
-          <div className="pointer-events-none absolute z-10 right-4 bottom-[196px] px-3 py-1.5 rounded-full bg-[#05070B]/70 border border-[#DCE4EE]/12 text-[11px] text-[#AEB7C3]">
+          <div className="pointer-events-none absolute z-10 left-1/2 -translate-x-1/2 bottom-[84px] px-3 py-1.5 rounded-full surface text-[11px] text-slate">
             Tap the globe to explore
           </div>
         )}
 
         {error && (
-          <div className="absolute z-10 left-1/2 -translate-x-1/2 top-24 px-3 py-2 rounded-[3px] bg-[#3a1414]/90 text-[12px] text-[#FFD9D0]">
+          <div className="absolute z-10 left-1/2 -translate-x-1/2 top-24 px-3 py-2 rounded-[7px] bg-[#3a1414]/90 text-[12px] text-[#FFD9D0]">
             {error}
           </div>
         )}
@@ -1160,53 +1221,14 @@ function Toggle({
   );
 }
 
-function Slider({
-  label,
-  value,
-  min,
-  max,
-  step,
-  current,
-  onChange,
-  disabled,
-}: {
-  label: string;
-  value: string;
-  min: number;
-  max: number;
-  step: number;
-  current: number;
-  onChange: (v: number) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <label className={`block ${disabled ? 'opacity-40' : ''}`}>
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[#AEB7C3]">{label}</span>
-        <span className="font-mono text-[12px] text-[#E9EDF3]">{value}</span>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={current}
-        disabled={disabled}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-[#8CC8D8] cursor-pointer"
-      />
-    </label>
-  );
-}
-
-function IconButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
+function DockButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="w-9 h-9 flex items-center justify-center text-[#AEB7C3] hover:text-white hover:bg-[#DCE4EE]/8 border-b border-[#DCE4EE]/10 last:border-b-0 cursor-pointer"
+      className="grid place-items-center w-[30px] h-[30px] rounded-[7px] text-ice/75 hover:text-ice hover:bg-ice/[0.08] active:scale-95 transition-[color,background-color,transform] duration-150 cursor-pointer"
     >
       {children}
     </button>

@@ -2,7 +2,30 @@ import React from 'react';
 import { EarthCanvas } from '../components/EarthCanvas';
 import { HeroSection } from '../components/HeroSection';
 import { HowWeThinkSection } from '../components/HowWeThinkSection';
-import { ArrowRight, Bot, ShieldAlert, Cpu, Users, Award } from 'lucide-react';
+import { ArrowRight, ArrowUpRight } from 'lucide-react';
+
+const PORTAL = [
+  {
+    id: 'solutions',
+    title: 'Solutions & systems',
+    body: 'AI voice agents, contract intelligence, predictive policing and constitutional recruitment engines in production.',
+  },
+  {
+    id: 'expertise',
+    title: 'Expertise',
+    body: 'Six advisory domains where artificial intelligence, statutory law and public policy intersect.',
+  },
+  {
+    id: 'approach',
+    title: 'Approach',
+    body: 'Intelligence, advisory, global perspective and institutional credibility behind every engagement.',
+  },
+  {
+    id: 'about',
+    title: 'About & founders',
+    body: 'The OMAV mark, the ॥ अधिकाराणां कृते ॥ motto, and the leadership of Priya Lalwani and Varad Ozarkar.',
+  },
+];
 
 interface HomePageProps {
   accentColor?: string;
@@ -42,127 +65,49 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </section>
 
-      {/* Flagship Exploratory Portal linking to dedicated pages */}
-      <section className="relative z-10 bg-[#06080E] py-24 sm:py-32 border-t border-[#DCE4EE]/10">
-        <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-14">
-          <div className="max-w-[800px] mb-16">
-            <div className="flex items-center gap-3.5 text-xs tracking-[0.3em] text-[#9AA4B2] font-mono">
-              <span
-                className="block w-7 h-[1px]"
-                style={{ backgroundColor: accentColor }}
-              />
-              <span>EXPLORE OMAV GLOBAL</span>
-            </div>
-            <h2 className="mt-5 text-3xl sm:text-4xl lg:text-[46px] font-medium tracking-[-0.03em] leading-[1.1] text-[#F2F5F9]">
-              Sovereign intelligence across technology, jurisprudence and statecraft.
+      {/* Index of the dedicated pages */}
+      <section className="relative z-10 bg-abyss py-24 sm:py-32 border-t border-hairline">
+        <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-14 grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-12 lg:gap-20">
+          <div className="max-w-[460px]">
+            <h2 className="text-[clamp(28px,3vw,44px)] leading-[1.05] text-ice">
+              Sovereign intelligence across technology, law and statecraft.
             </h2>
-            <p className="mt-4 text-base text-[#9AA4B2] leading-relaxed">
-              Explore our specialized practices, deployed governance solutions, operating philosophy, and leadership credentials across dedicated institutional sections.
+            <p className="mt-5 text-[17px] leading-[1.6] text-ice/70">
+              Our practices, deployed systems, operating philosophy and the people behind them.
             </p>
+            <button type="button" onClick={onRequestBriefing} className="btn btn-primary mt-9">
+              Request a briefing
+              <span className="btn-icon" aria-hidden="true">
+                <ArrowRight size={15} />
+              </span>
+            </button>
           </div>
 
-          {/* Quick Section Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Solutions Card */}
-            <div
-              onClick={() => onNavigate('solutions')}
-              className="bg-[#080C14] border border-[#DCE4EE]/10 rounded-lg p-7 flex flex-col justify-between hover:border-[#8CC8D8]/40 hover:bg-[#0A101C] transition-all cursor-pointer group"
-            >
-              <div>
-                <div className="w-10 h-10 rounded-[3px] bg-[#8CC8D8]/10 border border-[#8CC8D8]/20 flex items-center justify-center text-[#8CC8D8] mb-5">
-                  <Bot size={20} />
-                </div>
-                <div className="text-[11px] font-mono tracking-wider uppercase text-[#8C96A6]">
-                  DEPLOYED PLATFORMS
-                </div>
-                <h3 className="text-xl font-medium text-white mt-2 group-hover:text-[#8CC8D8] transition-colors">
-                  Solutions & Systems
-                </h3>
-                <p className="mt-3 text-sm text-[#9AA4B2] leading-relaxed">
-                  AI voice bots, contract intelligence, predictive policing, and constitutional recruitment engines in production.
-                </p>
-              </div>
-              <div className="mt-6 pt-4 border-t border-[#DCE4EE]/10 flex items-center justify-between text-xs font-mono text-[#E9EDF3]">
-                <span>View Solutions</span>
-                <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-
-            {/* Expertise Card */}
-            <div
-              onClick={() => onNavigate('expertise')}
-              className="bg-[#080C14] border border-[#DCE4EE]/10 rounded-lg p-7 flex flex-col justify-between hover:border-[#8CC8D8]/40 hover:bg-[#0A101C] transition-all cursor-pointer group"
-            >
-              <div>
-                <div className="w-10 h-10 rounded-[3px] bg-[#8CC8D8]/10 border border-[#8CC8D8]/20 flex items-center justify-center text-[#8CC8D8] mb-5">
-                  <Cpu size={20} />
-                </div>
-                <div className="text-[11px] font-mono tracking-wider uppercase text-[#8C96A6]">
-                  PRACTICE PILLARS
-                </div>
-                <h3 className="text-xl font-medium text-white mt-2 group-hover:text-[#8CC8D8] transition-colors">
-                  Multidisciplinary Expertise
-                </h3>
-                <p className="mt-3 text-sm text-[#9AA4B2] leading-relaxed">
-                  Six advisory domains where artificial intelligence, statutory law, and public sector policy intersect.
-                </p>
-              </div>
-              <div className="mt-6 pt-4 border-t border-[#DCE4EE]/10 flex items-center justify-between text-xs font-mono text-[#E9EDF3]">
-                <span>View Expertise</span>
-                <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-
-            {/* Approach Card */}
-            <div
-              onClick={() => onNavigate('approach')}
-              className="bg-[#080C14] border border-[#DCE4EE]/10 rounded-lg p-7 flex flex-col justify-between hover:border-[#8CC8D8]/40 hover:bg-[#0A101C] transition-all cursor-pointer group"
-            >
-              <div>
-                <div className="w-10 h-10 rounded-[3px] bg-[#8CC8D8]/10 border border-[#8CC8D8]/20 flex items-center justify-center text-[#8CC8D8] mb-5">
-                  <ShieldAlert size={20} />
-                </div>
-                <div className="text-[11px] font-mono tracking-wider uppercase text-[#8C96A6]">
-                  COMMITMENTS
-                </div>
-                <h3 className="text-xl font-medium text-white mt-2 group-hover:text-[#8CC8D8] transition-colors">
-                  Our Approach
-                </h3>
-                <p className="mt-3 text-sm text-[#9AA4B2] leading-relaxed">
-                  Intelligence, Advisory, Global perspective, and Institutional credibility behind every government engagement.
-                </p>
-              </div>
-              <div className="mt-6 pt-4 border-t border-[#DCE4EE]/10 flex items-center justify-between text-xs font-mono text-[#E9EDF3]">
-                <span>View Approach</span>
-                <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-
-            {/* About Card */}
-            <div
-              onClick={() => onNavigate('about')}
-              className="bg-[#080C14] border border-[#DCE4EE]/10 rounded-lg p-7 flex flex-col justify-between hover:border-[#8CC8D8]/40 hover:bg-[#0A101C] transition-all cursor-pointer group"
-            >
-              <div>
-                <div className="w-10 h-10 rounded-[3px] bg-[#8CC8D8]/10 border border-[#8CC8D8]/20 flex items-center justify-center text-[#8CC8D8] mb-5">
-                  <Users size={20} />
-                </div>
-                <div className="text-[11px] font-mono tracking-wider uppercase text-[#8C96A6]">
-                  LEADERSHIP
-                </div>
-                <h3 className="text-xl font-medium text-white mt-2 group-hover:text-[#8CC8D8] transition-colors">
-                  About & Founders
-                </h3>
-                <p className="mt-3 text-sm text-[#9AA4B2] leading-relaxed">
-                  The OMAV mark, ॥ अधिकाराणां कृते ॥ motto, and leadership profiles of Priya Lalwani and Varad Ozarkar.
-                </p>
-              </div>
-              <div className="mt-6 pt-4 border-t border-[#DCE4EE]/10 flex items-center justify-between text-xs font-mono text-[#E9EDF3]">
-                <span>View About & Founders</span>
-                <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-          </div>
+          <ul className="border-t border-hairline">
+            {PORTAL.map((item, i) => (
+              <li key={item.id} className="border-b border-hairline">
+                <button
+                  type="button"
+                  onClick={() => onNavigate(item.id)}
+                  className="group w-full grid grid-cols-[40px_minmax(0,1fr)_auto] items-start gap-x-5 py-7 text-left cursor-pointer rounded-[7px]"
+                >
+                  <span className="pt-1.5 font-mono text-[12px] text-slate group-hover:text-signal transition-colors duration-150">
+                    0{i + 1}
+                  </span>
+                  <span>
+                    <span className="block font-display text-[22px] sm:text-[26px] leading-tight text-ice">{item.title}</span>
+                    <span className="mt-2 block max-w-[520px] text-[15px] leading-[1.55] text-slate">{item.body}</span>
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className="mt-1 grid place-items-center w-10 h-10 rounded-[10px] text-ice/60 shadow-[inset_0_0_0_1px_rgb(233_237_243/0.14)] group-hover:bg-ice group-hover:text-abyss transition-[background-color,color] duration-200"
+                  >
+                    <ArrowUpRight size={16} />
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
     </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
+import { ArrowUpRight, Menu, X } from 'lucide-react';
 import { OmavMark } from './OmavMark';
-import { Menu, X } from 'lucide-react';
 
 interface NavbarProps {
   currentPage: string;
@@ -8,21 +9,32 @@ interface NavbarProps {
   onRequestBriefing: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({
-  currentPage,
-  onNavigate,
-  onRequestBriefing,
-}) => {
+const NAV_LINKS = [
+  { id: 'home', label: 'Home' },
+  { id: 'solutions', label: 'Solutions' },
+  { id: 'expertise', label: 'Expertise' },
+  { id: 'approach', label: 'Approach' },
+  { id: 'about', label: 'About' },
+];
+
+export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, onRequestBriefing }) => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const reduce = useReducedMotion();
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 30);
-    };
+    const handleScroll = () => setScrolled(window.scrollY > 30);
+    handleScroll();
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMobileMenuOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [mobileMenuOpen]);
 
   const handleNavClick = (page: string) => {
     onNavigate(page);
@@ -30,110 +42,113 @@ export const Navbar: React.FC<NavbarProps> = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const navLinks = [
-    { id: 'home', label: 'Home' },
-    { id: 'solutions', label: 'Solutions' },
-    { id: 'expertise', label: 'Expertise' },
-    { id: 'approach', label: 'Approach' },
-    { id: 'about', label: 'About' },
-  ];
-
   return (
     <header
       data-intro-reveal="fade"
       style={{ '--intro-delay': '1.25s' } as React.CSSProperties}
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? 'bg-[#05070B]/90 backdrop-blur-md border-b border-[#DCE4EE]/10 py-3 shadow-2xl shadow-black/40'
-          : 'bg-gradient-to-b from-[#05070B]/85 to-transparent py-4.5'
-      }`}
+      className="fixed top-0 left-0 right-0 z-50"
     >
-      <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-14 flex items-center justify-between gap-8">
-        {/* Zone 1: Single element brand wordmark */}
+      <div
+        aria-hidden="true"
+        className={`absolute inset-0 transition-opacity duration-300 bg-gradient-to-b from-abyss/90 via-abyss/55 to-transparent ${
+          scrolled ? 'opacity-100' : 'opacity-70'
+        }`}
+      />
+      <div className="relative max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-14 h-[76px] flex items-center justify-between gap-6">
         <button
+          type="button"
           onClick={() => handleNavClick('home')}
-          aria-label="OMAV Global Home"
-          className="flex items-center gap-3 text-[#E9EDF3] group shrink-0 no-underline bg-transparent border-none p-0 cursor-pointer text-left"
+          aria-label="OMAV Global, home"
+          className="flex items-center gap-3 text-ice shrink-0 cursor-pointer rounded-[7px]"
         >
           <OmavMark width={38} height={28} idPrefix="header" />
-          <div className="flex flex-col leading-none">
-            <span className="font-jost text-lg tracking-[0.16em] font-medium text-[#F2F5F9] group-hover:text-white transition-colors">
-              OMAV
-            </span>
-            <span className="text-[9px] tracking-[0.44em] text-[#9AA4B2] mt-1 font-medium">
-              GLOBAL
-            </span>
-          </div>
+          <span className="flex flex-col leading-none text-left">
+            <span className="font-jost text-[15px] tracking-[0.22em]">OMAV</span>
+            <span className="mt-1.5 font-mono text-[9px] tracking-[0.42em] text-slate">GLOBAL</span>
+          </span>
         </button>
 
-        {/* Zone 2: 4–5 clean single-line nav links */}
-        <nav
-          aria-label="Primary"
-          className="hidden md:flex items-center gap-8 text-sm font-medium text-[#AEB7C3]"
-        >
-          {navLinks.map((link) => (
-            <button
-              key={link.id}
-              onClick={() => handleNavClick(link.id)}
-              className={`hover:text-white transition-colors py-1 whitespace-nowrap shrink-0 bg-transparent border-none cursor-pointer relative ${
-                currentPage === link.id
-                  ? 'text-white font-semibold'
-                  : 'text-[#AEB7C3]'
-              }`}
-            >
-              {link.label}
-              {currentPage === link.id && (
-                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#8CC8D8] rounded-full" />
-              )}
-            </button>
-          ))}
+        {/* Primary navigation: a track with a sliding thumb on the current page */}
+        <nav aria-label="Primary" className="hidden md:block">
+          <ul className="surface flex items-center gap-0.5 rounded-[12px] p-1">
+            {NAV_LINKS.map((link) => {
+              const active = currentPage === link.id;
+              return (
+                <li key={link.id} className="relative">
+                  {active && (
+                    <motion.span
+                      layoutId="nav-thumb"
+                      className="absolute inset-0 rounded-[9px] bg-ice/[0.1] shadow-[inset_0_0_0_1px_rgb(233_237_243/0.12)]"
+                      transition={reduce ? { duration: 0 } : { type: 'spring', duration: 0.3, bounce: 0 }}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleNavClick(link.id)}
+                    aria-current={active ? 'page' : undefined}
+                    className={`relative h-9 px-3.5 rounded-[9px] text-[13.5px] font-medium transition-colors duration-150 cursor-pointer ${
+                      active ? 'text-ice' : 'text-slate hover:text-ice'
+                    }`}
+                  >
+                    {link.label}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </nav>
 
-        {/* Zone 3: 1 primary action */}
-        <div className="flex items-center gap-3 shrink-0">
-          <button
-            onClick={onRequestBriefing}
-            className="hidden sm:inline-flex items-center justify-center px-4 py-2 text-xs font-medium tracking-wide uppercase text-[#E9EDF3] bg-transparent border border-[#E9EDF3]/25 hover:border-[#E9EDF3]/80 hover:bg-[#E9EDF3]/5 transition-all duration-200 rounded-[3px] whitespace-nowrap shrink-0 cursor-pointer"
-          >
+        <div className="flex items-center gap-2 shrink-0">
+          <button type="button" onClick={onRequestBriefing} className="btn btn-primary btn-sm hidden sm:inline-flex">
             Contact
+            <span className="btn-icon" aria-hidden="true">
+              <ArrowUpRight size={15} />
+            </span>
           </button>
-
-          {/* Mobile hamburger toggle */}
           <button
+            type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-[#AEB7C3] hover:text-white cursor-pointer"
-            aria-label="Toggle Navigation Menu"
+            className="md:hidden grid place-items-center w-10 h-10 rounded-[10px] surface text-ice cursor-pointer"
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileMenuOpen}
           >
-            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-[#05070B]/98 backdrop-blur-xl border-b border-[#DCE4EE]/10 px-6 py-6 flex flex-col gap-4 text-sm font-medium text-[#AEB7C3]">
-          {navLinks.map((link) => (
-            <button
-              key={link.id}
-              onClick={() => handleNavClick(link.id)}
-              className={`text-left py-2 transition-colors cursor-pointer ${
-                currentPage === link.id ? 'text-white font-semibold' : 'hover:text-white'
-              }`}
-            >
-              {link.label}
-            </button>
-          ))}
-          <div className="pt-2 border-t border-white/10 flex gap-2">
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                onRequestBriefing();
-              }}
-              className="w-full text-center py-2.5 text-xs font-medium uppercase tracking-wider bg-[#E9EDF3] text-[#05070B] rounded-[3px]"
-            >
-              Contact / Request Briefing
-            </button>
-          </div>
+        <div className="omav-pop md:hidden relative mx-4 surface rounded-xl p-2">
+          <ul>
+            {NAV_LINKS.map((link) => (
+              <li key={link.id}>
+                <button
+                  type="button"
+                  onClick={() => handleNavClick(link.id)}
+                  aria-current={currentPage === link.id ? 'page' : undefined}
+                  className={`w-full flex items-center justify-between h-12 px-3 rounded-[9px] text-left text-[15px] cursor-pointer ${
+                    currentPage === link.id ? 'bg-ice/[0.08] text-ice' : 'text-slate hover:text-ice'
+                  }`}
+                >
+                  {link.label}
+                  {currentPage === link.id && <span className="w-1.5 h-1.5 rounded-full bg-signal" />}
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            onClick={() => {
+              setMobileMenuOpen(false);
+              onRequestBriefing();
+            }}
+            className="btn btn-primary mt-2 w-full justify-between"
+          >
+            Contact / request a briefing
+            <span className="btn-icon" aria-hidden="true">
+              <ArrowUpRight size={15} />
+            </span>
+          </button>
         </div>
       )}
     </header>

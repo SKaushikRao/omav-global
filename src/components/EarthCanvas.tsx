@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { introBridge, K, TL } from '../lib/introBridge';
 import { LogoIntro } from './LogoIntro';
+import { brainAmount, createStory, SCENES } from './story/storyScenes';
 import type { GlobeApi, GlobeHome } from './population/PopulationGlobe';
 
 // Cesium resolves its workers and assets from here (copied by Vite); must be
@@ -12,6 +13,14 @@ import type { GlobeApi, GlobeHome } from './population/PopulationGlobe';
 // and hands over to it once it has settled in the hero position.
 const PopulationGlobe = lazy(() => import('./population/PopulationGlobe'));
 const HANDOFF_S = 1.6;
+// Story path: which side the globe takes for each scene (-1 left, 1 right; the
+// text sits opposite) and the longitude it turns to face
+const SIDES = [-1, 1, -1, 1, -1];
+const SCENE_LON = [45, 84, 40, 66, 77];
+// Framing per scene, relative to the side-position size (1 = default)
+const SCENE_ZOOM = [1.5, 0.7, 1.1, 1.3, 0.9];
+const shortAngle = (d: number) => ((((d + Math.PI) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) - Math.PI;
+const wrap180 = (d: number) => ((((d + 180) % 360) + 360) % 360) - 180;
 
 interface EarthCanvasProps {
   accentColor?: string;
@@ -25,7 +34,8 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [activeStage, setActiveStage] = useState<'globe' | 'scatter' | 'matrix' | 'beam'>('globe');
+  const scrimLRef = useRef<HTMLDivElement | null>(null);
+  const scrimRRef = useRef<HTMLDivElement | null>(null);
   const [home, setHome] = useState<GlobeHome | null>(null);
   const [explore, setExplore] = useState(false);
   const [suspended, setSuspended] = useState(false);
@@ -595,434 +605,8 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
     orbit2.renderOrder = 3;
     root.add(orbit2);
 
-    // Particle field shaders
-    const P_VS = `
-      attribute vec3 aG;
-      attribute vec3 aC;
-      attribute float aR;
-      attribute float aA;
-      attribute float aS;
-      attribute float aZ;
-      attribute float aK;
-      uniform mat4 uGlobe;
-      uniform vec3 uNet;
-      uniform float uTilt;
-      uniform float uTime;
-      uniform float uScatter;
-      uniform float uOrder;
-      uniform float uConverge;
-      uniform float uImpact;
-      uniform float uAlpha;
-      uniform float uPix;
-      uniform float uDisc;
-      uniform float uSweep;
-      varying float vA;
-      varying float vK;
-      varying float vB;
-      ${ROTX}
-      float ease(float x){ x = clamp(x, 0.0, 1.0); return x * x * (3.0 - 2.0 * x); }
-      void main(){
-        vec3 g = (uGlobe * vec4(aG * 1.008, 1.0)).xyz;
-        float t = uTime;
-        vec3 drift = vec3(sin(t * 0.13 + aS * 40.0), cos(t * 0.11 + aS * 25.0), sin(t * 0.09 + aS * 13.0)) * 0.05;
-        vec3 c = uNet + aC * max(uDisc, 0.5) + drift;
-        float r = aR * uDisc;
-        float ang = aA + t * (0.10 / (0.2 + aR));
-        float sel = 1.0 - smoothstep(uConverge - 0.05, uConverge, aS);
-        float f = fract(t * (0.05 + aS * 0.04) + aS * 17.0);
-        float k = smoothstep(0.0, 0.72, f);
-        float aIn = ang + k * 5.0;
-        vec3 ringL = vec3(cos(ang) * r, 0.0, sin(ang) * r);
-        vec3 inL = vec3(cos(aIn) * r * (1.0 - k), 0.0, sin(aIn) * r * (1.0 - k));
-        float rise = pow(smoothstep(0.68, 1.0, f), 1.4) * 2.6 * max(uDisc, 0.55) * sel;
-        vec3 Lp = mix(ringL, inL, sel);
-        float wr = fract(t * 0.18) * 1.9;
-        float wave = exp(-pow((aR - wr) * 9.0, 2.0)) * uImpact * (1.0 - sel);
-        Lp.y += wave * 0.05;
-        vec3 ringP = uNet + rx(Lp, uTilt) + rx(vec3(0.0, rise, 0.0), uTilt * 0.25);
-        float s1 = ease(uScatter * 1.6 - aS * 0.6);
-        float s2 = ease(uOrder * 1.6 - fract(aS * 7.31) * 0.6);
-        float tr = sin(s2 * 3.14159);
-        vec3 p = mix(g, c, s1);
-        p = mix(p, ringP, s2) + vec3(sin(aS * 91.0), cos(aS * 53.0), sin(aS * 27.0)) * tr * 0.18;
-        vec4 mv = modelViewMatrix * vec4(p, 1.0);
-        gl_Position = projectionMatrix * mv;
-        float tw = 0.75 + 0.25 * sin(t * (1.0 + aS * 2.0) + aS * 60.0);
-        float sw = pow(0.5 + 0.5 * cos(ang - t * 0.35 - aR * 3.0), 10.0) * uSweep * s2;
-        float inBeam = sel * smoothstep(0.6, 0.75, f) * s2;
-        vB = tw * (0.75 + sw * 1.4 + wave * 2.0 + inBeam * 1.2);
-        vA = uAlpha * (0.35 + 0.65 * s1);
-        vK = aK;
-        gl_PointSize = aZ * uPix * (4.4 / -mv.z);
-      }
-    `;
-
-    const P_FS = `
-      uniform vec3 uSilver;
-      uniform vec3 uCyan;
-      varying float vA;
-      varying float vK;
-      varying float vB;
-      void main(){
-        float d = length(gl_PointCoord - 0.5);
-        float a = smoothstep(0.5, 0.05, d);
-        gl_FragColor = vec4(mix(uSilver, uCyan, vK) * vB, a * vA);
-      }
-    `;
-
-    const pMat = new THREE.ShaderMaterial({
-      uniforms: {
-        uGlobe: { value: new THREE.Matrix4() },
-        uNet: U.uNet,
-        uTilt: U.uTilt,
-        uTime: U.uTime,
-        uScatter: { value: 0 },
-        uOrder: { value: 0 },
-        uConverge: { value: 0 },
-        uImpact: U.uImpact,
-        uAlpha: { value: 0 },
-        uPix: { value: 1 },
-        uDisc: U.uDisc,
-        uSweep: U.uSweep,
-        uSilver: { value: silver },
-        uCyan: { value: accent },
-      },
-      vertexShader: P_VS,
-      fragmentShader: P_FS,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    });
-
-    const isMobile = (stage.clientWidth || 1200) < 760;
-
-    function buildParticles(img: HTMLImageElement | null) {
-      if (!alive) return;
-      const IW = 512;
-      const IH = 256;
-      let data: Uint8ClampedArray | null = null;
-      if (img) {
-        try {
-          const c = document.createElement('canvas');
-          c.width = IW;
-          c.height = IH;
-          const cx = c.getContext('2d');
-          if (cx) {
-            cx.drawImage(img, 0, 0, IW, IH);
-            data = cx.getImageData(0, 0, IW, IH).data;
-          }
-        } catch {
-          data = null;
-        }
-      }
-
-      const N = isMobile ? 5200 : 9600;
-      const aG = new Float32Array(N * 3);
-      const aC = new Float32Array(N * 3);
-      const aR = new Float32Array(N);
-      const aA = new Float32Array(N);
-      const aS = new Float32Array(N);
-      const aZ = new Float32Array(N);
-      const aK = new Float32Array(N);
-
-      const RINGS = 44;
-      const R0 = 0.14;
-      const DR = 0.032;
-      const weights: number[] = [];
-      let wsum = 0;
-
-      for (let k = 0; k < RINGS; k++) {
-        const w = (R0 + k * DR) * (0.55 + 0.45 * Math.random());
-        weights.push(w);
-        wsum += w;
-      }
-
-      for (let i = 0; i < N; i++) {
-        let lat = 0;
-        let lon = 0;
-        let tries = 0;
-        while (true) {
-          const u = Math.random();
-          const v = Math.random();
-          lat = (Math.asin(2 * v - 1) * 180) / Math.PI;
-          lon = u * 360 - 180;
-          if (!data) break;
-          const px = Math.min(IW - 1, Math.floor(u * IW));
-          const py = Math.min(IH - 1, Math.floor(((90 - lat) / 180) * IH));
-          // Specular map has high values on water, low on land; sample predominantly on landmass
-          if (data[(py * IW + px) * 4] < 90 || tries > 14 || Math.random() < 0.05) break;
-          tries += 1;
-        }
-
-        const gp = ll(lat, lon, 1);
-        aG[i * 3] = gp.x;
-        aG[i * 3 + 1] = gp.y;
-        aG[i * 3 + 2] = gp.z;
-
-        const z = 2 * Math.random() - 1;
-        const th = Math.random() * Math.PI * 2;
-        const sq = Math.sqrt(1 - z * z);
-        const d = 0.45 + Math.pow(Math.random(), 0.7) * 1.55;
-
-        aC[i * 3] = sq * Math.cos(th) * d * 1.3;
-        aC[i * 3 + 1] = sq * Math.sin(th) * d * 0.75;
-        aC[i * 3 + 2] = z * d * 0.6;
-
-        let pick = Math.random() * wsum;
-        let kk = 0;
-        while (kk < RINGS - 1 && pick > weights[kk]) {
-          pick -= weights[kk];
-          kk += 1;
-        }
-
-        aR[i] = R0 + kk * DR + (Math.random() - 0.5) * 0.006;
-        aA[i] = Math.random() * Math.PI * 2;
-        aS[i] = Math.random();
-        aZ[i] = Math.random() < 0.06 ? 2.6 + Math.random() * 1.6 : 0.9 + Math.random() * 1.0;
-        aK[i] = Math.random() < 0.2 ? 1 : 0;
-      }
-
-      const g = new THREE.BufferGeometry();
-      g.setAttribute('position', new THREE.BufferAttribute(aG, 3));
-      g.setAttribute('aG', new THREE.BufferAttribute(aG, 3));
-      g.setAttribute('aC', new THREE.BufferAttribute(aC, 3));
-      g.setAttribute('aR', new THREE.BufferAttribute(aR, 1));
-      g.setAttribute('aA', new THREE.BufferAttribute(aA, 1));
-      g.setAttribute('aS', new THREE.BufferAttribute(aS, 1));
-      g.setAttribute('aZ', new THREE.BufferAttribute(aZ, 1));
-      g.setAttribute('aK', new THREE.BufferAttribute(aK, 1));
-
-      const pts = new THREE.Points(g, pMat);
-      pts.frustumCulled = false;
-      pts.renderOrder = 4;
-      scene.add(pts);
-    }
-
-    const specImg = new Image();
-    specImg.crossOrigin = 'anonymous';
-    specImg.onload = () => buildParticles(specImg);
-    specImg.onerror = () => buildParticles(null);
-    specImg.src = URL_SPEC;
-
-    // Concentric Ring Lines on the disc
-    const RL_N = 88;
-    const RL_SEG = 180;
-    const rlCount = RL_N * RL_SEG * 2;
-    const rlPos = new Float32Array(rlCount * 3);
-    const rlR = new Float32Array(rlCount);
-    const rlA = new Float32Array(rlCount);
-    let ix = 0;
-
-    for (let rk = 0; rk < RL_N; rk++) {
-      const rad = 0.12 + rk * 0.0165;
-      for (let sg = 0; sg < RL_SEG; sg++) {
-        rlR[ix] = rad;
-        rlA[ix] = (sg / RL_SEG) * Math.PI * 2;
-        ix += 1;
-        rlR[ix] = rad;
-        rlA[ix] = ((sg + 1) / RL_SEG) * Math.PI * 2;
-        ix += 1;
-      }
-    }
-
-    const rlGeo = new THREE.BufferGeometry();
-    rlGeo.setAttribute('position', new THREE.BufferAttribute(rlPos, 3));
-    rlGeo.setAttribute('aR', new THREE.BufferAttribute(rlR, 1));
-    rlGeo.setAttribute('aA', new THREE.BufferAttribute(rlA, 1));
-
-    const rlMat = new THREE.ShaderMaterial({
-      uniforms: {
-        uNet: U.uNet,
-        uTilt: U.uTilt,
-        uDisc: U.uDisc,
-        uTime: U.uTime,
-        uRings: U.uRings,
-        uSweep: U.uSweep,
-        uImpact: U.uImpact,
-        uColor: { value: silver },
-      },
-      vertexShader: `
-        attribute float aR;
-        attribute float aA;
-        uniform vec3 uNet;
-        uniform float uTilt;
-        uniform float uDisc;
-        uniform float uTime;
-        uniform float uRings;
-        uniform float uSweep;
-        uniform float uImpact;
-        varying float vAl;
-        ${ROTX}
-        void main(){
-          vec3 Lp = vec3(cos(aA) * aR * uDisc, 0.0, sin(aA) * aR * uDisc);
-          vec3 p = uNet + rx(Lp, uTilt);
-          float sw = pow(0.5 + 0.5 * cos(aA - uTime * 0.35 - aR * 3.0), 10.0) * uSweep;
-          float wr = fract(uTime * 0.18) * 1.9;
-          float wave = exp(-pow((aR - wr) * 9.0, 2.0)) * uImpact;
-          float edge = smoothstep(0.1, 0.32, aR) * (1.0 - smoothstep(1.25, 1.56, aR));
-          float h = fract(sin(aR * 913.7) * 43758.5);
-          vAl = uRings * edge * (0.035 + 0.07 * h + sw * 0.32 + wave * 0.5);
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform vec3 uColor;
-        varying float vAl;
-        void main(){
-          gl_FragColor = vec4(uColor, vAl);
-        }
-      `,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    });
-
-    const ringLines = new THREE.LineSegments(rlGeo, rlMat);
-    ringLines.frustumCulled = false;
-    ringLines.renderOrder = 4;
-    scene.add(ringLines);
-
-    // Spiraling data arms
-    const SP_N = 16;
-    const SP_SEG = 140;
-    const spCount = SP_N * SP_SEG * 2;
-    const spPos = new Float32Array(spCount * 3);
-    const spT = new Float32Array(spCount);
-    const spO = new Float32Array(spCount);
-    let jx = 0;
-
-    for (let si = 0; si < SP_N; si++) {
-      const a0 = (si / SP_N) * Math.PI * 2;
-      const off = Math.random();
-      for (let sj = 0; sj < SP_SEG; sj++) {
-        for (let e = 0; e < 2; e++) {
-          const tt = (sj + e) / SP_SEG;
-          const rr2 = 1.5 * Math.pow(1 - tt, 1.15) + 0.03;
-          const aa2 = a0 + tt * 3.4;
-          spPos[jx * 3] = Math.cos(aa2) * rr2;
-          spPos[jx * 3 + 1] = 0;
-          spPos[jx * 3 + 2] = Math.sin(aa2) * rr2;
-          spT[jx] = tt;
-          spO[jx] = off;
-          jx += 1;
-        }
-      }
-    }
-
-    const spGeo = new THREE.BufferGeometry();
-    spGeo.setAttribute('position', new THREE.BufferAttribute(spPos, 3));
-    spGeo.setAttribute('aT', new THREE.BufferAttribute(spT, 1));
-    spGeo.setAttribute('aO', new THREE.BufferAttribute(spO, 1));
-
-    const spMat = new THREE.ShaderMaterial({
-      uniforms: {
-        uNet: U.uNet,
-        uTilt: U.uTilt,
-        uDisc: U.uDisc,
-        uTime: U.uTime,
-        uPaths: U.uPaths,
-        uColor: { value: accent },
-      },
-      vertexShader: `
-        attribute float aT;
-        attribute float aO;
-        uniform vec3 uNet;
-        uniform float uTilt;
-        uniform float uDisc;
-        varying float vT;
-        varying float vO;
-        ${ROTX}
-        void main(){
-          vT = aT;
-          vO = aO;
-          vec3 p = uNet + rx(position * uDisc, uTilt);
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform float uTime;
-        uniform float uPaths;
-        uniform vec3 uColor;
-        varying float vT;
-        varying float vO;
-        void main(){
-          float head = fract(uTime * 0.11 + vO);
-          float tail = smoothstep(head - 0.3, head, vT) * step(vT, head);
-          gl_FragColor = vec4(uColor, (0.04 + tail * 0.7) * uPaths * smoothstep(0.0, 0.08, vT));
-        }
-      `,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    });
-
-    const spirals = new THREE.LineSegments(spGeo, spMat);
-    spirals.frustumCulled = false;
-    spirals.renderOrder = 4;
-    scene.add(spirals);
-
-    // Vertical Strategy Beam
-    const beamGeo = new THREE.PlaneGeometry(0.7, 3.6);
-    beamGeo.translate(0, 1.8, 0);
-
-    const beamMat = new THREE.ShaderMaterial({
-      uniforms: {
-        uBeam: U.uBeam,
-        uTime: U.uTime,
-        uCyan: { value: accent },
-      },
-      vertexShader: UV_VS,
-      fragmentShader: `
-        uniform float uBeam;
-        uniform float uTime;
-        uniform vec3 uCyan;
-        varying vec2 vUv;
-        void main(){
-          float x = abs(vUv.x - 0.5) * 2.0;
-          float core = exp(-x * x * 120.0);
-          float glow = exp(-x * x * 10.0) * 0.22;
-          float y = vUv.y;
-          float vf = smoothstep(0.0, 0.04, y) * pow(1.0 - y, 1.6);
-          float sh = 0.82 + 0.18 * sin(y * 46.0 - uTime * 4.5);
-          gl_FragColor = vec4(mix(uCyan, vec3(1.0), clamp(core * 1.2, 0.0, 1.0)), (core * 1.3 + glow) * vf * sh * uBeam);
-        }
-      `,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide,
-    });
-
-    const beam = new THREE.Mesh(beamGeo, beamMat);
-    beam.frustumCulled = false;
-    beam.renderOrder = 5;
-    scene.add(beam);
-
-    // Central Core Glow
-    const glowMat = new THREE.ShaderMaterial({
-      uniforms: {
-        uA: { value: 0 },
-        uCyan: { value: accent },
-      },
-      vertexShader: UV_VS,
-      fragmentShader: `
-        uniform float uA;
-        uniform vec3 uCyan;
-        varying vec2 vUv;
-        void main(){
-          float d = length(vUv - 0.5) * 2.0;
-          float a = (exp(-d * d * 18.0) * 0.9 + exp(-d * d * 3.0) * 0.16) * uA;
-          gl_FragColor = vec4(mix(uCyan, vec3(1.0), exp(-d * d * 30.0)), a);
-        }
-      `,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    });
-
-    const glow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), glowMat);
-    glow.renderOrder = 5;
-    scene.add(glow);
+    // The five "How we think" scenes, drawn on and around this Earth
+    const storyFx = createStory(spin, root, ll);
 
     // Responsive Camera and Globe layout positioning
     const L = { gx: 1.2, gy: 0, gs: 1, nx: 1, ny: -0.2, disc: 0.8, H: 800 };
@@ -1119,20 +703,6 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       return t * t * (3 - 2 * t);
     }
 
-    const cur = {
-      scatter: 0,
-      order: 0,
-      fade: 1,
-      palpha: 0,
-      net: 1,
-      rings: 0,
-      paths: 0,
-      sweep: 0,
-      conv: 0,
-      beam: 0,
-      impact: 0,
-    };
-
     const t0 = performance.now();
     let last = t0;
     let cleared = true;
@@ -1149,6 +719,63 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
     const upV = new THREE.Vector3();
     const WORLD_UP = new THREE.Vector3(0, 1, 0);
     let wasSuspended = false;
+    let autoAngle = 0;
+
+    // Surface point facing the viewer, and the screen roll of the north axis
+    function facing() {
+      spin.getWorldQuaternion(qSpin);
+      toCam.copy(camera.position).sub(root.position).normalize();
+      local.copy(toCam).applyQuaternion(qInv.copy(qSpin).invert());
+      const lat = 90 - (Math.acos(Math.max(-1, Math.min(1, local.y))) * 180) / Math.PI;
+      const lon = wrap180((Math.atan2(local.z, -local.x) * 180) / Math.PI - 180);
+      northW.set(0, 1, 0).applyQuaternion(qSpin);
+      fwd.copy(toCam).negate();
+      rightV.crossVectors(fwd, WORLD_UP).normalize();
+      upV.crossVectors(rightV, fwd);
+      return { lat, lon, roll: Math.atan2(northW.dot(rightV), northW.dot(upV)) };
+    }
+
+    // Spin angle (relative to BASE) that turns a longitude to face the viewer
+    let calib: { lon0: number; k: number } | null = null;
+    function sceneAngle(i: number) {
+      if (!calib) {
+        const saved = spin.rotation.y;
+        spin.rotation.y = BASE;
+        scene.updateMatrixWorld();
+        const l0 = facing().lon;
+        spin.rotation.y = BASE + 0.2;
+        scene.updateMatrixWorld();
+        const l1 = facing().lon;
+        spin.rotation.y = saved;
+        scene.updateMatrixWorld();
+        calib = { lon0: l0, k: wrap180(l1 - l0) / 0.2 || -57.3 };
+      }
+      return (wrap180(SCENE_LON[i] - calib.lon0) * Math.PI) / 180 / ((calib.k * Math.PI) / 180);
+    }
+
+    // Scroll positions (in stage heights) where each scene's text is centred
+    const anchors = { how: 0.8, scene: [1.6, 2.6, 3.6, 4.6, 5.6], span: [1, 1, 1, 1, 1] };
+    let anchorTick = 0;
+    function measureAnchors(rect: DOMRect) {
+      if (anchorTick-- > 0 || !story || !stage) return;
+      anchorTick = 30;
+      const SH = stage.clientHeight || 1;
+      const centre = (id: string) => {
+        const el = story.querySelector<HTMLElement>(`#${id}`);
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        return (r.top - rect.top + r.height / 2 - SH / 2) / SH;
+      };
+      const h = centre('how');
+      if (h !== null) anchors.how = h;
+      SCENES.forEach((id, i) => {
+        const c = centre(id);
+        if (c !== null) anchors.scene[i] = c;
+      });
+      for (let i = 0; i < 5; i++) {
+        anchors.span[i] = i < 4 ? anchors.scene[i + 1] - anchors.scene[i] : anchors.scene[4] - anchors.scene[3];
+      }
+    }
 
     function frame(now: number) {
       if (!alive) return;
@@ -1181,48 +808,42 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       const SH = stage.clientHeight || L.H;
       const u = Math.max(0, -rect.top / SH);
 
-      // Determine current visual stage for UI pill or hints
-      if (u < 0.8) {
-        setActiveStage('globe');
-      } else if (u < 2.0) {
-        setActiveStage('scatter');
-      } else if (u < 3.2) {
-        setActiveStage('matrix');
-      } else {
-        setActiveStage('beam');
+      // ------------------------------------------------ story: scenes and path
+      measureAnchors(rect);
+      const A = anchors;
+      const weight = [0, 0, 0, 0, 0];
+      const progress = [0, 0, 0, 0, 0];
+      let lead = -1;
+      let leadW = 0;
+      for (let i = 0; i < 5; i++) {
+        const span = A.span[i];
+        const d = u - A.scene[i];
+        progress[i] = Math.min(1, Math.max(0, d / span + 0.5));
+        weight[i] = 1 - sm(0.34, 0.52, Math.abs(d) / span);
+        if (weight[i] > leadW) {
+          leadW = weight[i];
+          lead = i;
+        }
       }
 
-      const tg = {
-        scatter: sm(0.18, 1.2, u),
-        order: sm(1.5, 2.35, u),
-        fade: 1 - sm(0.2, 0.8, u),
-        palpha: sm(0.12, 0.45, u),
-        net: 1 - sm(0.04, 0.4, u),
-        rings: sm(1.9, 2.6, u),
-        paths: sm(2.6, 3.2, u) * (1 - 0.6 * sm(4.2, 4.7, u)),
-        sweep: sm(2.5, 3.1, u),
-        conv: 0.45 * sm(3.3, 4.1, u),
-        beam: sm(3.5, 4.5, u),
-        impact: sm(4.2, 4.7, u),
-      };
-
-      const kf = 1 - Math.exp(-dt * 5);
-      for (const key in tg) {
-        (cur as any)[key] += ((tg as any)[key] - (cur as any)[key]) * kf;
-      }
+      // The Earth comes back from Cesium as the scroll starts, and stays
+      // The hand-over runs across the "How we think" intro, while the globe is
+      // already moving; the Cesium Earth tracks it so there is no double image
+      const storyK = sm(0.02, Math.max(0.2, anchors.how * 0.8), u);
+      const net = 1 - sm(0.04, 0.4, u);
 
       if (cesiumReady.current && introBridge.mode !== 'play') handoff = Math.min(1, handoff + dt / HANDOFF_S);
-      const keepThree = 1 - handoff;
+      const keepThree = 1 - handoff * (1 - storyK);
       const cl = cesiumLayerRef.current;
       if (cl) {
-        const o = handoff * cur.fade;
+        const o = handoff * (1 - storyK);
         const os = o.toFixed(3);
         if (cl.style.opacity !== os) cl.style.opacity = os;
         const pe = o > 0.5 ? 'auto' : 'none';
         if (cl.style.pointerEvents !== pe) cl.style.pointerEvents = pe;
       }
       renderer.domElement.style.pointerEvents = handoff > 0.5 ? 'none' : 'auto';
-      const susp = u > 0.15;
+      const susp = u > 0.03;
       if (susp !== wasSuspended) {
         wasSuspended = susp;
         setSuspended(susp);
@@ -1244,12 +865,86 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       pmx += (mx - pmx) * pk;
       pmy += (my - pmy) * pk;
 
-      let gx = L.gx;
-      let gy = L.gy;
-      let gsc = L.gs * (0.93 + 0.07 * rev) * (1 - 0.05 * (1 - cur.fade));
+      // Idle spin at the hero; it stops as soon as the scroll begins
+      autoAngle += dt * (prefersReducedMotion ? 0.008 : 0.028) * (1 - sm(0, 0.04, u));
+
+      // Path through the scenes: alternate sides, dipping between them
+      const hh = Math.tan((camera.fov * Math.PI) / 360) * camera.position.z;
+      const hw = hh * camera.aspect;
+      const wide = camera.aspect >= 1.05;
+      const sideScale = wide ? Math.min(L.gs * 0.9, hh * 0.62) : Math.min(L.gs * 0.92, hw * 0.92);
+      // Keyframes: hero, the intro transit, then the five scenes. Each scene has
+      // its own framing (zoom); every move turns the Earth forward.
+      const sideX = (i: number, z: number) => SIDES[i] * hw * (0.5 + (z - 1) * 0.08);
+      const keys = [
+        { u: 0, x: L.gx, y: L.gy, s: L.gs, a: autoAngle },
+        {
+          u: A.how,
+          x: wide ? hw * 0.34 : 0,
+          y: wide ? -hh * 0.04 : -hh * 0.28,
+          s: wide ? L.gs * 1.04 : L.gs * 0.95,
+          a: autoAngle + 0.9,
+        },
+        ...A.scene.map((su, i) => ({
+          u: su,
+          x: wide ? sideX(i, SCENE_ZOOM[i]) : 0,
+          y: wide ? -hh * 0.02 : -hh * 0.36,
+          s: sideScale * SCENE_ZOOM[i],
+          a: 0,
+        })),
+      ];
+      // Unwrap scene angles so each move rotates forward by at least ~45°
+      for (let i = 2; i < keys.length; i++) {
+        let a = sceneAngle(i - 2);
+        const min = keys[i - 1].a + 0.8;
+        a += Math.ceil((min - a) / (2 * Math.PI)) * 2 * Math.PI;
+        keys[i].a = a;
+      }
+      let k0 = keys[0];
+      let k1 = keys[0];
+      let f = 0;
+      let gap = 1;
+      for (let i = 0; i < keys.length - 1; i++) {
+        if (u >= keys[i].u) {
+          k0 = keys[i];
+          k1 = keys[i + 1];
+          gap = k1.u - k0.u;
+          // Short holds: the globe is nearly always on the move
+          f = i === 0 ? K.smoother(0.0, k1.u, u) : K.smoother(k0.u + gap * 0.12, k1.u - gap * 0.12, u);
+        }
+      }
+      if (u >= keys[keys.length - 1].u) {
+        k0 = k1 = keys[keys.length - 1];
+        f = 0;
+      }
+      const travel = Math.sin(Math.PI * f);
+      const dirX = Math.sign(k1.x - k0.x);
+      const storyX = k0.x + (k1.x - k0.x) * f;
+      const dip = k0.x !== k1.x ? travel * hh * (wide ? 0.14 : 0.06) : 0;
+      const storyY = k0.y + (k1.y - k0.y) * f - dip;
+      // Pull back mid-move, then settle into the next framing
+      const storyS = (k0.s + (k1.s - k0.s) * f) * (1 - 0.1 * travel);
+      // Gentle drift while a scene holds, so the Earth never sits still
+      const drift = k0 === k1 ? 0 : 0.1 * Math.sin((2 * Math.PI * (u - k0.u)) / Math.max(0.2, gap));
+      const storyAngle = k0.a + (k1.a - k0.a) * f + drift * storyK;
+      // Lean into the direction of travel
+      const lean = -dirX * travel * 0.12 * storyK;
+
+      // Side scrims follow the text, which sits opposite the globe
+      if (scrimLRef.current && scrimRRef.current) {
+        const side = wide ? Math.max(-1, Math.min(1, storyX / (hw * 0.5))) : 1;
+        const lK = u < A.how ? 1 : Math.max(0, side);
+        const rK = u < A.how ? 0 : Math.max(0, -side);
+        scrimLRef.current.style.opacity = lK.toFixed(3);
+        scrimRRef.current.style.opacity = rK.toFixed(3);
+      }
+
+      let gx = storyX;
+      let gy = storyY;
+      let gsc = storyS * (0.93 + 0.07 * rev);
       let eFade = 1;
       let atmoK = 1;
-      let kPar = 1;
+      let kPar = 1 - 0.7 * storyK;
       let sunK = 1;
       let expo = 1;
       let depth = 1;
@@ -1273,29 +968,30 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
         if (it < TL.CAM1 && introBridge.dot) {
           const Hd = stage.clientHeight || 1;
           const Wd = stage.clientWidth || 1;
-          const hh = Math.tan((camera.fov * Math.PI) / 360) * camera.position.z;
           const wpp = (2 * hh) / Hd;
           gx = (cam.x - Wd / 2) * wpp;
           gy = -(cam.y - Hd / 2) * wpp;
           gsc = Math.max(1e-4, cam.r * wpp);
         }
         const cu = it < TL.CAM1 ? cam.u : 1;
-        kPar = K.seg(it, TL.CAM1, TL.CAM1 + 1.2);
+        kPar = Math.min(kPar, K.seg(it, TL.CAM1, TL.CAM1 + 1.2));
         rotOff = -0.24 * (1 - cu);
         sunK = cu;
         expo = 1 + 0.7 * (1 - cu);
       }
       SUN.copy(SUN_I).lerp(SUN_H, sunK).normalize();
 
-      spin.rotation.y = BASE + time * (prefersReducedMotion ? 0.008 : 0.028) + rotOff + yaw;
+      spin.rotation.y = BASE + storyAngle + rotOff + yaw;
       root.rotation.y = pmx * 0.08 * kPar;
       root.rotation.x = (pmy * 0.05 + pitch) * kPar;
+      root.rotation.z = lean;
       root.position.set(gx, gy, 0);
       root.scale.setScalar(gsc);
 
       const EU = earthMat.uniforms;
-      EU.uFade.value = cur.fade * eFade * keepThree;
-      EU.uReveal.value = rev;
+      EU.uFade.value = eFade * keepThree;
+      // Slightly darker in the story so its overlays read; darkest behind the brain
+      EU.uReveal.value = rev * (1 - 0.22 * storyK) * (1 - 0.6 * brainAmount(weight, progress));
       EU.uDepth.value = depth;
       EU.uEarth.value = earthK;
       EU.uLand.value = landK;
@@ -1306,12 +1002,12 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       EU.uDotC.value.set(cam.x, cam.y);
       EU.uDotR.value = Math.max(1, cam.r);
       EU.uRes.value.set(stage.clientWidth || 1, stage.clientHeight || 1, renderer.domElement.width || 1, renderer.domElement.height || 1);
-      earth.visible = cur.fade * keepThree > 0.004;
-      earthMat.depthWrite = cur.fade > 0.55 && eFade > 0.6;
-      atmoMat.uniforms.uA.value = rev * cur.fade * atmoK * keepThree;
+      earth.visible = keepThree > 0.004;
+      earthMat.depthWrite = eFade > 0.6;
+      atmoMat.uniforms.uA.value = rev * atmoK * keepThree;
       atmo.visible = earth.visible && atmoK > 0.001;
 
-      const na = netIn * cur.net * keepThree;
+      const na = netIn * net * keepThree;
       const show = na > 0.002;
 
       for (let i = 0; i < markers.length; i++) {
@@ -1328,38 +1024,17 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       }
 
       for (let ai = 0; ai < arcs.length; ai++) {
-        const A = arcs[ai];
-        A.line.visible = show;
-        A.mat.uniforms.uDraw.value = draw;
-        A.mat.uniforms.uAlpha.value = na * 0.85;
-        A.mat.uniforms.uHead.value = ((time * A.speed + A.offset) % 1) * 1.35;
+        const Ar = arcs[ai];
+        Ar.line.visible = show;
+        Ar.mat.uniforms.uDraw.value = draw;
+        Ar.mat.uniforms.uAlpha.value = na * 0.85;
+        Ar.mat.uniforms.uHead.value = ((time * Ar.speed + Ar.offset) % 1) * 1.35;
       }
 
       orbitMat.uniforms.uA.value = na * 0.14;
       orbit1.visible = show;
       orbit2.visible = show;
-
       U.uTime.value = time;
-      NET.set(L.nx, L.ny, 0);
-      U.uDisc.value = L.disc;
-      U.uRings.value = cur.rings;
-      U.uSweep.value = cur.sweep;
-      U.uImpact.value = cur.impact;
-      U.uPaths.value = cur.paths;
-      U.uBeam.value = cur.beam;
-
-      ringLines.visible = cur.rings > 0.002;
-      spirals.visible = cur.paths > 0.002;
-
-      beam.visible = cur.beam > 0.002;
-      beam.position.copy(NET);
-      beam.rotation.x = TILT * 0.25;
-      beam.scale.set(Math.max(L.disc, 0.5) * 1.1, Math.max(L.disc, 0.55) * 1.15, 1);
-
-      glow.position.copy(NET);
-      glow.scale.setScalar(L.disc * 1.5);
-      glowMat.uniforms.uA.value = cur.rings * 0.3 + cur.beam * 0.8;
-      glow.visible = glowMat.uniforms.uA.value > 0.002;
 
       scene.updateMatrixWorld();
 
@@ -1367,50 +1042,42 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       // light, so the cross-fade (and its idle drift afterwards) has no seam
       const api = globeApi.current;
       if (api && (handoff > 0 || introBridge.mode !== 'play')) {
-        spin.getWorldQuaternion(qSpin);
-        toCam.copy(camera.position).sub(root.position).normalize();
-        local.copy(toCam).applyQuaternion(qInv.copy(qSpin).invert());
-        const lat = 90 - (Math.acos(Math.max(-1, Math.min(1, local.y))) * 180) / Math.PI;
-        let lon = (Math.atan2(local.z, -local.x) * 180) / Math.PI - 180;
-        lon = ((((lon + 180) % 360) + 360) % 360) - 180;
-        northW.set(0, 1, 0).applyQuaternion(qSpin);
-        fwd.copy(toCam).negate();
-        rightV.crossVectors(fwd, WORLD_UP).normalize();
-        upV.crossVectors(rightV, fwd);
-        const roll = Math.atan2(northW.dot(rightV), northW.dot(upV));
-        // Key light in the globe's own line-of-sight frame (it sits off-axis here)
-        api.follow({ lat, lon, roll, sun: [SUN.dot(rightV), SUN.dot(upV), SUN.dot(toCam)] });
+        const v = facing();
+        const wpp = (2 * hh) / (stage.clientHeight || 1);
+        api.follow({
+          lat: v.lat,
+          lon: v.lon,
+          roll: v.roll,
+          sun: [SUN.dot(rightV), SUN.dot(upV), SUN.dot(toCam)],
+          dx: gx / wpp,
+          dy: -gy / wpp,
+          r: gsc / wpp,
+        });
       }
 
       // Eagles ride each arc's head, turned to face their direction of flight
       for (let ai = 0; ai < arcs.length; ai++) {
-        const A = arcs[ai];
-        const hd = A.mat.uniforms.uHead.value;
+        const Ar = arcs[ai];
+        const hd = Ar.mat.uniforms.uHead.value;
         const vis = show && hd > 0 && hd < 1;
-        A.eagle.visible = vis;
+        Ar.eagle.visible = vis;
         if (!vis) continue;
-        A.pointAt(hd, eP0);
-        A.eagle.position.copy(eP0);
-        A.pointAt(Math.min(1, hd + 0.01), eP1);
+        Ar.pointAt(hd, eP0);
+        Ar.eagle.position.copy(eP0);
+        Ar.pointAt(Math.min(1, hd + 0.01), eP1);
         eP0.applyMatrix4(spin.matrixWorld).project(camera);
         eP1.applyMatrix4(spin.matrixWorld).project(camera);
-        A.eagleMat.rotation =
+        Ar.eagleMat.rotation =
           Math.atan2(eP1.y - eP0.y, (eP1.x - eP0.x) * camera.aspect) - Math.PI / 2;
-        A.eagleMat.opacity = na * sm(0, 0.08, hd) * (1 - sm(0.92, 1, hd));
+        Ar.eagleMat.opacity = na * sm(0, 0.08, hd) * (1 - sm(0.92, 1, hd));
       }
 
-      const P = pMat.uniforms;
-      P.uGlobe.value.copy(spin.matrixWorld);
-      P.uScatter.value = cur.scatter;
-      P.uOrder.value = cur.order;
-      P.uConverge.value = cur.conv;
-      P.uAlpha.value = cur.palpha * rev;
-      P.uPix.value = dpr * Math.max(0.8, L.H / 900);
+      // Scenes scale with the globe on screen, so marks keep their size
+      const pxScale = dpr * Math.max(0.75, Math.min(1.4, (gsc / hh) * 1.6));
+      storyFx.update({ time, weight, progress, presence: storyK, pixel: pxScale });
 
-      // After the hand-over, the top of the page shows only the Cesium Earth:
-      // skip drawing this scene until the story's layers come in
-      const idle =
-        handoff >= 1 && cur.palpha < 0.002 && cur.rings < 0.002 && cur.paths < 0.002 && cur.beam < 0.002;
+      // At the hero only the Cesium Earth shows: skip drawing this scene there
+      const idle = handoff >= 1 && storyK < 0.002;
       if (idle) {
         if (!idleCleared) {
           renderer.clear();
@@ -1422,12 +1089,14 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       renderer.render(scene, camera);
     }
 
+
     raf = requestAnimationFrame(frame);
 
     return () => {
       alive = false;
       cancelAnimationFrame(raf);
       clearTimeout(safetyTimer);
+      storyFx.dispose();
       introBridge.setLayout(null);
       if (ro) ro.disconnect();
       window.removeEventListener('resize', layout);
@@ -1457,10 +1126,17 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       />
 
       {/* Atmospheric dark gradient scrims so text remains 100% legible */}
-      <div
-        aria-hidden="true"
-        className="omav-scrim absolute inset-0 pointer-events-none bg-gradient-to-r from-[#05070B]/85 via-[#05070B]/40 to-transparent max-md:bg-gradient-to-t max-md:from-[#05070B] max-md:via-[#05070B]/60 max-md:to-transparent"
-      />
+      <div className="omav-scrim absolute inset-0 pointer-events-none" aria-hidden="true">
+        <div
+          ref={scrimLRef}
+          className="absolute inset-0 bg-gradient-to-r from-[#05070B]/85 via-[#05070B]/40 via-35% to-transparent to-60% max-md:bg-gradient-to-b max-md:from-[#05070B]/90 max-md:via-[#05070B]/50 max-md:to-transparent"
+        />
+        <div
+          ref={scrimRRef}
+          className="absolute inset-0 bg-gradient-to-l from-[#05070B]/85 via-[#05070B]/40 via-35% to-transparent to-60% max-md:hidden"
+          style={{ opacity: 0 }}
+        />
+      </div>
       <div
         aria-hidden="true"
         className="absolute left-0 right-0 bottom-0 h-32 pointer-events-none bg-gradient-to-t from-[#05070B] to-transparent"
@@ -1487,17 +1163,6 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
         </Suspense>
       </div>
 
-      {/* Subtle interaction cue in bottom right */}
-      <div
-        data-intro-reveal
-        style={{ '--intro-delay': '2s' } as React.CSSProperties}
-        className="omav-hero-copy absolute right-6 bottom-8 hidden lg:flex items-center gap-2.5 text-[11px] tracking-widest text-[#8C96A6] pointer-events-none select-none uppercase font-mono"
-      >
-        <span className="w-1.5 h-1.5 rounded-full bg-[#8CC8D8]/70 animate-pulse" />
-        <span>Drag to rotate · Click for density · Scroll to transform</span>
-        <span className="text-[#AEB7C3]/40">|</span>
-        <span className="text-[#8CC8D8] font-semibold">{activeStage.toUpperCase()}</span>
-      </div>
     </div>
   );
 };
