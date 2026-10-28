@@ -123,3 +123,47 @@ html.omav-intro:not(.omav-go) footer {
 .animate-pulse-slow {
   animation: pulseSlow 4s ease-in-out infinite;
 }
+
+/* Hero globe (CesiumJS): explore mode clears the hero copy and holds the page */
+.omav-hero-copy,
+.omav-scrim {
+  transition: opacity 0.6s ease;
+}
+html.omav-exploring {
+  overflow: hidden;
+}
+html.omav-exploring .omav-hero-copy,
+html.omav-exploring .omav-scrim {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+html.omav-exploring header {
+  opacity: 0.35;
+  transition: opacity 0.6s ease;
+}
+html.omav-exploring header:hover {
+  opacity: 1;
+}
+
+/* Imagery and data credits, required by the providers: small and quiet */
+.omav-cesium-credits {
+  font-size: 10px;
+  line-height: 1.4;
+  color: rgba(174, 183, 195, 0.6);
+  white-space: nowrap;
+}
+.omav-cesium-credits .cesium-credit-textContainer,
+.omav-cesium-credits .cesium-credit-logoContainer {
+  display: inline;
+}
+.omav-cesium-credits a {
+  color: inherit;
+}
+.omav-cesium-credits img {
+  height: 14px;
+  vertical-align: middle;
+  opacity: 0.7;
+}
+.omav-cesium .cesium-viewer-bottom {
+  display: none;
+}

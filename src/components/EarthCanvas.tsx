@@ -1,7 +1,17 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { introBridge, K, TL } from '../lib/introBridge';
 import { LogoIntro } from './LogoIntro';
+import type { GlobeApi, GlobeHome } from './population/PopulationGlobe';
+
+// Cesium resolves its workers and assets from here (copied by Vite); must be
+// set before the Cesium chunk evaluates.
+(window as unknown as { CESIUM_BASE_URL: string }).CESIUM_BASE_URL = '/cesium';
+
+// The real, data-bearing Earth. The Three.js Earth below carries the logo intro
+// and hands over to it once it has settled in the hero position.
+const PopulationGlobe = lazy(() => import('./population/PopulationGlobe'));
+const HANDOFF_S = 1.6;
 
 interface EarthCanvasProps {
   accentColor?: string;
@@ -16,6 +26,27 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [activeStage, setActiveStage] = useState<'globe' | 'scatter' | 'matrix' | 'beam'>('globe');
+  const [home, setHome] = useState<GlobeHome | null>(null);
+  const [explore, setExplore] = useState(false);
+  const [suspended, setSuspended] = useState(false);
+  const cesiumLayerRef = useRef<HTMLDivElement | null>(null);
+  const cesiumReady = useRef(false);
+  const globeApi = useRef<GlobeApi | null>(null);
+
+  // Explore mode: globe centred, hero copy out of the way, page held in place
+  useEffect(() => {
+    const html = document.documentElement;
+    html.classList.toggle('omav-exploring', explore);
+    if (!explore) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setExplore(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      html.classList.remove('omav-exploring');
+    };
+  }, [explore]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -42,7 +73,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       return;
     }
 
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     renderer.setPixelRatio(dpr);
     renderer.setClearColor(0x000000, 0);
 
@@ -1026,6 +1057,11 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
 
       // Resting globe placement is the intro camera's destination
       introBridge.setLayout({ gs: L.gs, gx: L.gx, gy: L.gy, hh, W, H });
+
+      // Where the real Earth takes over: same centre and silhouette radius
+      const wpp = (2 * hh) / H;
+      const next = { dx: Math.round(L.gx / wpp), dy: Math.round(-L.gy / wpp), r: Math.round(L.gs / wpp) };
+      setHome((prev) => (prev && prev.dx === next.dx && prev.dy === next.dy && prev.r === next.r ? prev : next));
     }
 
     layout();
@@ -1100,6 +1136,19 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
     const t0 = performance.now();
     let last = t0;
     let cleared = true;
+    let idleCleared = false;
+    let handoff = 0; // 0 = Three.js Earth, 1 = Cesium Earth
+    // Scratch for reading the intro Earth's orientation each frame
+    const qSpin = new THREE.Quaternion();
+    const qInv = new THREE.Quaternion();
+    const toCam = new THREE.Vector3();
+    const local = new THREE.Vector3();
+    const northW = new THREE.Vector3();
+    const fwd = new THREE.Vector3();
+    const rightV = new THREE.Vector3();
+    const upV = new THREE.Vector3();
+    const WORLD_UP = new THREE.Vector3(0, 1, 0);
+    let wasSuspended = false;
 
     function frame(now: number) {
       if (!alive) return;
@@ -1160,6 +1209,24 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       const kf = 1 - Math.exp(-dt * 5);
       for (const key in tg) {
         (cur as any)[key] += ((tg as any)[key] - (cur as any)[key]) * kf;
+      }
+
+      if (cesiumReady.current && introBridge.mode !== 'play') handoff = Math.min(1, handoff + dt / HANDOFF_S);
+      const keepThree = 1 - handoff;
+      const cl = cesiumLayerRef.current;
+      if (cl) {
+        const o = handoff * cur.fade;
+        const os = o.toFixed(3);
+        if (cl.style.opacity !== os) cl.style.opacity = os;
+        const pe = o > 0.5 ? 'auto' : 'none';
+        if (cl.style.pointerEvents !== pe) cl.style.pointerEvents = pe;
+      }
+      renderer.domElement.style.pointerEvents = handoff > 0.5 ? 'none' : 'auto';
+      const susp = u > 0.15;
+      if (susp !== wasSuspended) {
+        wasSuspended = susp;
+        setSuspended(susp);
+        if (susp) setExplore(false);
       }
 
       const rev = introOn ? 1 : sm(0, 2.4, tIntro);
@@ -1227,7 +1294,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       root.scale.setScalar(gsc);
 
       const EU = earthMat.uniforms;
-      EU.uFade.value = cur.fade * eFade;
+      EU.uFade.value = cur.fade * eFade * keepThree;
       EU.uReveal.value = rev;
       EU.uDepth.value = depth;
       EU.uEarth.value = earthK;
@@ -1239,12 +1306,12 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       EU.uDotC.value.set(cam.x, cam.y);
       EU.uDotR.value = Math.max(1, cam.r);
       EU.uRes.value.set(stage.clientWidth || 1, stage.clientHeight || 1, renderer.domElement.width || 1, renderer.domElement.height || 1);
-      earth.visible = cur.fade > 0.004;
+      earth.visible = cur.fade * keepThree > 0.004;
       earthMat.depthWrite = cur.fade > 0.55 && eFade > 0.6;
-      atmoMat.uniforms.uA.value = rev * cur.fade * atmoK;
+      atmoMat.uniforms.uA.value = rev * cur.fade * atmoK * keepThree;
       atmo.visible = earth.visible && atmoK > 0.001;
 
-      const na = netIn * cur.net;
+      const na = netIn * cur.net * keepThree;
       const show = na > 0.002;
 
       for (let i = 0; i < markers.length; i++) {
@@ -1296,6 +1363,25 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
 
       scene.updateMatrixWorld();
 
+      // The Cesium Earth follows this one's facing point, north-axis roll and key
+      // light, so the cross-fade (and its idle drift afterwards) has no seam
+      const api = globeApi.current;
+      if (api && (handoff > 0 || introBridge.mode !== 'play')) {
+        spin.getWorldQuaternion(qSpin);
+        toCam.copy(camera.position).sub(root.position).normalize();
+        local.copy(toCam).applyQuaternion(qInv.copy(qSpin).invert());
+        const lat = 90 - (Math.acos(Math.max(-1, Math.min(1, local.y))) * 180) / Math.PI;
+        let lon = (Math.atan2(local.z, -local.x) * 180) / Math.PI - 180;
+        lon = ((((lon + 180) % 360) + 360) % 360) - 180;
+        northW.set(0, 1, 0).applyQuaternion(qSpin);
+        fwd.copy(toCam).negate();
+        rightV.crossVectors(fwd, WORLD_UP).normalize();
+        upV.crossVectors(rightV, fwd);
+        const roll = Math.atan2(northW.dot(rightV), northW.dot(upV));
+        // Key light in the globe's own line-of-sight frame (it sits off-axis here)
+        api.follow({ lat, lon, roll, sun: [SUN.dot(rightV), SUN.dot(upV), SUN.dot(toCam)] });
+      }
+
       // Eagles ride each arc's head, turned to face their direction of flight
       for (let ai = 0; ai < arcs.length; ai++) {
         const A = arcs[ai];
@@ -1321,6 +1407,18 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       P.uAlpha.value = cur.palpha * rev;
       P.uPix.value = dpr * Math.max(0.8, L.H / 900);
 
+      // After the hand-over, the top of the page shows only the Cesium Earth:
+      // skip drawing this scene until the story's layers come in
+      const idle =
+        handoff >= 1 && cur.palpha < 0.002 && cur.rings < 0.002 && cur.paths < 0.002 && cur.beam < 0.002;
+      if (idle) {
+        if (!idleCleared) {
+          renderer.clear();
+          idleCleared = true;
+        }
+        return;
+      }
+      idleCleared = false;
       renderer.render(scene, camera);
     }
 
@@ -1354,7 +1452,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
 
       <canvas
         ref={canvasRef}
-        aria-label="Interactive 3D Earth and Global Intelligence Network"
+        aria-hidden="true"
         className="absolute top-0 left-0 w-full h-full block cursor-grab active:cursor-grabbing"
       />
 
@@ -1368,14 +1466,35 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
         className="absolute left-0 right-0 bottom-0 h-32 pointer-events-none bg-gradient-to-t from-[#05070B] to-transparent"
       />
 
+      {/* Real Earth (CesiumJS) with the population density data */}
+      <div
+        ref={cesiumLayerRef}
+        className="absolute inset-0 z-[1]"
+        style={{ opacity: 0, pointerEvents: 'none' }}
+        aria-label="Interactive globe of 2020 population density"
+      >
+        <Suspense fallback={null}>
+          <PopulationGlobe
+            home={home}
+            explore={explore}
+            suspended={suspended}
+            onExploreChange={setExplore}
+            apiRef={globeApi}
+            onReady={() => {
+              cesiumReady.current = true;
+            }}
+          />
+        </Suspense>
+      </div>
+
       {/* Subtle interaction cue in bottom right */}
       <div
         data-intro-reveal
         style={{ '--intro-delay': '2s' } as React.CSSProperties}
-        className="absolute right-6 bottom-8 hidden lg:flex items-center gap-2.5 text-[11px] tracking-widest text-[#8C96A6] pointer-events-none select-none uppercase font-mono"
+        className="omav-hero-copy absolute right-6 bottom-8 hidden lg:flex items-center gap-2.5 text-[11px] tracking-widest text-[#8C96A6] pointer-events-none select-none uppercase font-mono"
       >
         <span className="w-1.5 h-1.5 rounded-full bg-[#8CC8D8]/70 animate-pulse" />
-        <span>Drag to rotate · Scroll to transform</span>
+        <span>Drag to rotate · Click for density · Scroll to transform</span>
         <span className="text-[#AEB7C3]/40">|</span>
         <span className="text-[#8CC8D8] font-semibold">{activeStage.toUpperCase()}</span>
       </div>

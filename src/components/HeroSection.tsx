@@ -13,7 +13,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   accentColor = '#8CC8D8',
 }) => {
   return (
-    <div className="min-h-screen relative flex items-center pt-24 pb-16">
+    <div className="omav-hero-copy min-h-screen relative flex items-center pt-24 pb-16">
       <div className="w-full max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-14">
         <div className="max-w-[760px] pointer-events-auto">
           {/* Eyebrow */}

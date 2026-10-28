@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Source raster (343 MB); web tiles are built from it into public/data/population
+*.tif

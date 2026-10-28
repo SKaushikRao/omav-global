@@ -2,10 +2,27 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
+import {viteStaticCopy} from 'vite-plugin-static-copy';
+
+// Cesium loads its workers, widgets and assets at runtime from CESIUM_BASE_URL
+const cesiumSource = 'node_modules/cesium/Build/Cesium';
+const cesiumBaseUrl = 'cesium';
 
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      viteStaticCopy({
+        targets: [
+          {
+            src: `${cesiumSource}/{ThirdParty,Workers,Assets,Widgets}/**/*`,
+            dest: cesiumBaseUrl,
+            rename: {stripBase: 4}, // keep paths from Workers/, Assets/, …
+          },
+        ],
+      }),
+    ],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
