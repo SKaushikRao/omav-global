@@ -3,6 +3,7 @@ import { EarthCanvas } from '../components/EarthCanvas';
 import { HeroSection } from '../components/HeroSection';
 import { HowWeThinkSection } from '../components/HowWeThinkSection';
 import { ArrowRight, ArrowUpRight } from 'lucide-react';
+import GlowCursor from '../components/ui/GlowCursor';
 
 const PORTAL = [
   {
@@ -39,6 +40,9 @@ export const HomePage: React.FC<HomePageProps> = ({
   onNavigate,
 }) => {
   const storyRef = React.useRef<HTMLDivElement | null>(null);
+  const [finePointer] = React.useState(
+    () => !!window.matchMedia?.('(hover: hover) and (pointer: fine)').matches
+  );
 
   const scrollToHow = () => {
     const el = document.getElementById('how');
@@ -66,8 +70,24 @@ export const HomePage: React.FC<HomePageProps> = ({
       </section>
 
       {/* Index of the dedicated pages */}
-      <section className="relative z-10 bg-abyss py-24 sm:py-32 border-t border-hairline">
-        <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-14 grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-12 lg:gap-20">
+      <section className="relative z-10 bg-abyss py-24 sm:py-32 border-t border-hairline overflow-hidden">
+        {/* Glow cursor, only in this section after the story */}
+        {finePointer && (
+          <GlowCursor
+            color="#8CC8D8"
+            intensity={1.3}
+            trailWidth={3}
+            linger={0.6}
+            glow={1.2}
+            clickBurst
+            theme="dark"
+            quality="medium"
+            maxDevicePixelRatio={1}
+            aria-hidden="true"
+            style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}
+          />
+        )}
+        <div className="relative z-[1] max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-14 grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-12 lg:gap-20">
           <div className="max-w-[460px]">
             <h2 className="text-[clamp(28px,3vw,44px)] leading-[1.05] text-ice">
               Sovereign intelligence across technology, law and statecraft.

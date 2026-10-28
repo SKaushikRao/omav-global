@@ -3,17 +3,20 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { Suspense, lazy, useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { HomePage } from './pages/HomePage';
-import { SolutionsPage } from './pages/SolutionsPage';
-import { ExpertisePage } from './pages/ExpertisePage';
-import { ApproachPage } from './pages/ApproachPage';
-import { AboutPage } from './pages/AboutPage';
 import { ContactSection } from './components/ContactSection';
 import { Footer } from './components/Footer';
 import { BriefingModal } from './components/BriefingModal';
 import { introBridge } from './lib/introBridge';
+import GlowCursor from './components/ui/GlowCursor';
+
+// Inner pages load on demand, keeping the first load to the home page
+const SolutionsPage = lazy(() => import('./pages/SolutionsPage').then((m) => ({ default: m.SolutionsPage })));
+const ExpertisePage = lazy(() => import('./pages/ExpertisePage').then((m) => ({ default: m.ExpertisePage })));
+const ApproachPage = lazy(() => import('./pages/ApproachPage').then((m) => ({ default: m.ApproachPage })));
+const AboutPage = lazy(() => import('./pages/AboutPage').then((m) => ({ default: m.AboutPage })));
 
 const PAGES = ['solutions', 'expertise', 'approach', 'about'];
 
@@ -28,6 +31,9 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState<string>(pageFromLocation);
   const [briefingModalOpen, setBriefingModalOpen] = useState(false);
   const accentColor = '#8CC8D8';
+  const [finePointer] = useState(
+    () => !!window.matchMedia?.('(hover: hover) and (pointer: fine)').matches
+  );
 
   // Logo intro: plays when the visit lands on the home page. The page chrome
   // rises in once the Earth has taken over from the emblem ("go").
@@ -37,6 +43,17 @@ export default function App() {
     if (pageFromLocation() === 'home' && !reduced) introBridge.start();
     else introBridge.disable();
   });
+
+  // Prefetch the inner pages once the home intro has played, so navigation is instant
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      import('./pages/SolutionsPage');
+      import('./pages/ExpertisePage');
+      import('./pages/ApproachPage');
+      import('./pages/AboutPage');
+    }, 9000);
+    return () => window.clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -93,6 +110,24 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#05070B] text-[#E9EDF3] selection:bg-[#8CC8D8]/20 selection:text-white flex flex-col justify-between">
+      {/* Glow cursor on the inner pages (the home page has its own scene) */}
+      {currentPage !== 'home' && finePointer && (
+        <GlowCursor
+          key={currentPage}
+          color="#8CC8D8"
+          intensity={1.3}
+          trailWidth={3}
+          linger={0.6}
+          glow={1.2}
+          clickBurst
+          theme="dark"
+          quality="medium"
+          maxDevicePixelRatio={1}
+          aria-hidden="true"
+          style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', zIndex: 40, pointerEvents: 'none' }}
+        />
+      )}
+
       {/* Top Navbar */}
       <Navbar
         currentPage={currentPage}
@@ -102,6 +137,7 @@ export default function App() {
 
       {/* Dynamic Page Views */}
       <main className="flex-1">
+        <Suspense fallback={<div className="min-h-screen" />}>
         {currentPage === 'home' && (
           <HomePage
             accentColor={accentColor}
@@ -145,6 +181,7 @@ export default function App() {
             onRequestBriefing={handleOpenBriefing}
           />
         )}
+        </Suspense>
       </main>
 
       {/* Institutional Footer */}

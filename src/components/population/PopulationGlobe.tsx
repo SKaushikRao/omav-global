@@ -606,7 +606,8 @@ export default function PopulationGlobe({
     return () => {
       cancelled = true;
       const dots = dotsRef.current;
-      if (dots && viewerRef.current) viewerRef.current.scene.primitives.remove(dots.points);
+      const v = viewerRef.current;
+      if (dots && v && !v.isDestroyed()) v.scene.primitives.remove(dots.points);
       dotsRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -675,7 +676,8 @@ export default function PopulationGlobe({
     });
     requestRender();
     return () => {
-      added.forEach((e) => viewer.entities.remove(e));
+      // The viewer may already be destroyed when the page unmounts
+      if (!viewer.isDestroyed()) added.forEach((e) => viewer.entities.remove(e));
       cityEntities.current.clear();
     };
   }, [cities]);

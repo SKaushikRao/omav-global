@@ -66,6 +66,8 @@
   font-weight: 600;
 }
 
+/* Components sit in Tailwind's components layer so utilities can override them */
+@layer components {
 /* Buttons: a solid primary with an arrow cell, and a hairline secondary */
 .btn {
   display: inline-flex;
@@ -308,6 +310,7 @@ html.omav-exploring header:hover {
 .omav-cesium .cesium-viewer-bottom {
   display: none;
 }
+}
 
 /* Popovers answer the click that opened them: a short scale-and-fade */
 @keyframes omavPop {
@@ -322,5 +325,16 @@ html.omav-exploring header:hover {
 @media (prefers-reduced-motion: reduce) {
   .omav-pop {
     animation: none;
+  }
+}
+
+/* Spotlight cards in the OMAV system: tighter radius and padding than the default */
+.spotlight-card.omav-card {
+  padding: 28px;
+  border-radius: 16px;
+}
+@media (min-width: 640px) {
+  .spotlight-card.omav-card {
+    padding: 32px;
   }
 }

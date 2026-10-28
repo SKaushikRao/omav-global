@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { introBridge, K, TL } from '../lib/introBridge';
 import { LogoIntro } from './LogoIntro';
+import { ErrorBoundary } from './ErrorBoundary';
 import { brainAmount, createStory, SCENES } from './story/storyScenes';
 import type { GlobeApi, GlobeHome } from './population/PopulationGlobe';
 
@@ -1149,6 +1150,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
         style={{ opacity: 0, pointerEvents: 'none' }}
         aria-label="Interactive globe of 2020 population density"
       >
+        <ErrorBoundary>
         <Suspense fallback={null}>
           <PopulationGlobe
             home={home}
@@ -1161,6 +1163,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
             }}
           />
         </Suspense>
+        </ErrorBoundary>
       </div>
 
     </div>

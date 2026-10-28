@@ -1,170 +1,173 @@
 import React from 'react';
-import { AboutFoundersSection } from '../components/AboutFoundersSection';
-import { LightTunnel } from '../components/LightTunnel';
+import { OmavMark } from '../components/OmavMark';
+import { Card, CtaBand, Mono, PageBackdrop, PageHero, Section } from '../components/page/PageParts';
+import Galaxy from '../components/ui/Galaxy';
 
 interface AboutPageProps {
   accentColor?: string;
   onRequestBriefing: () => void;
 }
 
-export const AboutPage: React.FC<AboutPageProps> = ({
-  accentColor = '#8CC8D8',
-  onRequestBriefing,
-}) => {
-  const milestones = [
-    {
-      year: '2025',
-      title: 'Harvard India Conference Invitation',
-      detail:
-        'Co-founder Varad Ozarkar invited to address international leadership on public sector AI recruitment and constitutional bias safeguards.',
-    },
-    {
-      year: '2024',
-      title: 'State AI Recruitment & Cyber Safe Platforms',
-      detail:
-        'Conceived and deployed Maharashtra state administration’s first AI recruitment engine and citizen cyber-crime call agent; felicitated by the Hon’ble Chief Minister.',
-    },
-    {
-      year: '2023',
-      title: 'DSCI & NASSCOM BSE Honoree',
-      detail:
-        'Honoured at the Bombay Stock Exchange during "Ring the Bell for Security & Privacy" for state-level cyber-defense engineering.',
-    },
-    {
-      year: '2022',
-      title: 'GovTech Innovation Award',
-      detail:
-        'Priya Lalwani led a 24-hour rapid security incident response and multimillion-dollar public IT modernization recognized with the GovTech Innovation Award.',
-    },
-    {
-      year: '2021',
-      title: 'New Jersey–India Mission on Investment',
-      detail:
-        'Shaped high-level bilateral technology and investment mission with the office of Governor Phil Murphy.',
-    },
-  ];
+const FOUNDERS = [
+  {
+    name: 'Priya Lalwani',
+    focus: 'Strategy · Public-sector transformation · Operations',
+    bio: [
+      'Priya Lalwani is a co-founder of OMAV Global, where she leads the firm’s strategy, operations and public-sector transformation work. She holds an MBA in Corporate Strategy and Operations from Columbia Business School.',
+      'Priya has led multi-million-dollar modernisation programmes for US state governments, directing cross-functional teams of more than sixty professionals across two continents. Her coordination of a twenty-four-hour response to a state-level security incident was recognised with the GovTech Innovation Award.',
+      'Previously, as Chief Strategy Officer and a founding executive of an education venture serving Europe, the Middle East, Africa and the United States, she more than doubled revenue and introduced AI-enabled analytics and matching that improved student retention by a quarter. At Columbia, she served as Vice President of the South Asian Business Association.',
+    ],
+  },
+  {
+    name: 'Varad Ozarkar',
+    focus: 'AI governance · Cyber policy · International strategy',
+    bio: [
+      'Varad Ozarkar is a co-founder of OMAV Global, where he leads the firm’s work on AI governance and international strategy. His platforms are in use across the Maharashtra state administration.',
+      'Varad conceived and deployed Maharashtra’s first AI-based public-sector recruitment system, designed for transparency and constitutional bias controls, and built the state’s cyber-safety platforms, including an AI-powered cyber-crime call agent and the Maharashtra Cyber Safe app. The work was felicitated by the Hon’ble Chief Minister of Maharashtra and honoured at the Bombay Stock Exchange during DSCI and NASSCOM’s “Ring the Bell for Security & Privacy.”',
+      'He advises state law-enforcement leadership on AI and cyber strategy, and helped shape the New Jersey–India Mission on Investment and Strategy with the office of Governor Phil Murphy. He was invited to the Harvard India Conference in 2025.',
+    ],
+  },
+];
 
-  return (
-    <div className="relative min-h-screen text-[#E9EDF3] bg-[#05070B] overflow-hidden">
-      {/* Dynamic LightTunnel WebGL Background */}
-      <div className="fixed inset-0 z-0 pointer-events-auto">
-        <LightTunnel
-          cableColor="#344860"
-          pulseColor="#8CC8D8"
-          tunnelColor="#05070B"
-          tunnelOpacity={0.25}
-          speed={0.12}
-          flowDirection="inward"
-          pulseSpeed={2.2}
-          pulseLength={0.32}
-          pulseBlend={0.6}
-          pulseWidth={1.2}
-          pulseDensity={0.55}
-          cableCount={56}
-          thickness={0.35}
-          rimWidth={0.2}
-          waviness={0.3}
-          sway={0.45}
-          bend={0.38}
-          size={1.05}
-          glow={1.2}
-          fadeNear={0.35}
-          fadeFar={2.2}
-          brightness={1.05}
-          colorVariance={true}
-          grain={true}
-          grainIntensity={0.04}
-          opacity={0.65}
-          mouseInteraction={true}
-          mouseStrength={0.12}
-          clickSurge={true}
-          intro={true}
+const MILESTONES = [
+  {
+    year: '2025',
+    title: 'Harvard India Conference invitation',
+    detail:
+      'Co-founder Varad Ozarkar invited to address international leadership on public sector AI recruitment and constitutional bias safeguards.',
+  },
+  {
+    year: '2024',
+    title: 'State AI recruitment & Cyber Safe platforms',
+    detail:
+      'Conceived and deployed Maharashtra state administration’s first AI recruitment engine and citizen cyber-crime call agent; felicitated by the Hon’ble Chief Minister.',
+  },
+  {
+    year: '2023',
+    title: 'DSCI & NASSCOM BSE honoree',
+    detail:
+      'Honoured at the Bombay Stock Exchange during "Ring the Bell for Security & Privacy" for state-level cyber-defense engineering.',
+  },
+  {
+    year: '2022',
+    title: 'GovTech Innovation Award',
+    detail:
+      'Priya Lalwani led a 24-hour rapid security incident response and multimillion-dollar public IT modernization recognized with the GovTech Innovation Award.',
+  },
+  {
+    year: '2021',
+    title: 'New Jersey–India Mission on Investment',
+    detail: 'Shaped high-level bilateral technology and investment mission with the office of Governor Phil Murphy.',
+  },
+];
+
+export const AboutPage: React.FC<AboutPageProps> = ({ onRequestBriefing }) => (
+  <div className="relative text-ice">
+      <PageBackdrop>
+        <Galaxy
+          density={1}
+          glowIntensity={0.3}
+          flareIntensity={1}
+          starSpeed={0.5}
+          mouseRepulsion
+          clickWarp
+          starColors={[]}
+          hueShift={140}
+          saturation={0}
+          starSize={1}
+          twinkleIntensity={0.3}
+          speed={1}
+          rotationSpeed={0.1}
+          layers={4}
+          direction="forward"
+          repulsionStrength={2}
+          mouseInteraction
+          intro
+          lightMode={false}
+          dpr={1}
         />
-
-        {/* Sophisticated dark gradient vignettes to guarantee text legibility & sovereign atmosphere */}
-        <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-[#05070B]/85 via-[#05070B]/60 to-[#05070B]/90" />
-        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-[#05070B]/35 to-[#05070B]/95" />
-      </div>
-
-      {/* Foreground Content Layer */}
-      <div className="relative z-10 pt-24 pb-20 pointer-events-auto">
-        {/* Header */}
-        <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-14 py-16 sm:py-24 border-b border-[#DCE4EE]/10">
-          <div className="max-w-[840px] bg-[#05070B]/65 backdrop-blur-md p-6 sm:p-8 rounded-lg border border-[#DCE4EE]/8">
-            <div className="flex items-center gap-3.5 text-xs tracking-[0.3em] text-[#9AA4B2] font-mono">
-              <span
-                className="block w-7 h-[1px]"
-                style={{ backgroundColor: accentColor }}
-              />
-              <span>ABOUT OMAV GLOBAL</span>
-            </div>
-
-            <h1 className="mt-6 text-4xl sm:text-5xl lg:text-[60px] font-medium tracking-tight text-white leading-[1.08]">
-              Advice for institutions working where technology, law and public purpose meet.
-            </h1>
-
-            <p className="mt-6 text-lg sm:text-xl text-[#AEB7C3] leading-relaxed max-w-[720px]">
-              OMAV Global Consultancy Services is a multidisciplinary advisory practice. We bring legal rigour, technological fluency and an international outlook to the questions government bodies, enterprises and research institutions find hardest to answer.
-            </p>
+      </PageBackdrop>
+<div className="relative z-[1]">
+    <PageHero
+      tunnel={false}
+      title="Advice for institutions working where technology, law and public purpose meet."
+      lede="OMAV Global Consultancy Services is a multidisciplinary advisory practice. We bring legal rigour, technological fluency and an international outlook to the questions government bodies, enterprises and research institutions find hardest to answer."
+      aside={
+        <Card className="!p-8 text-center">
+          <div className="flex justify-center">
+            <OmavMark width={150} height={109} idPrefix="aboutHero" />
           </div>
-        </div>
-
-        {/* Main About & Founders Section */}
-        <AboutFoundersSection accentColor={accentColor} />
-
-        {/* Institutional Track Record & Distinctions */}
-        <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-14 py-20 border-t border-[#DCE4EE]/10">
-          <div className="mb-12">
-            <div className="text-xs font-mono tracking-widest text-[#8CC8D8] uppercase">
-              Recognitions & Public Impact Milestones
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-medium text-white mt-2">
-              Demonstrated execution across state administrations and global forums.
-            </h2>
+          <div className="mt-6 font-sanskrit text-[26px] text-ice" lang="sa">
+            ॥ अधिकाराणां कृते ॥
           </div>
+          <Mono className="mt-2 text-signal">For the sake of rights</Mono>
+          <p className="mt-5 text-[14px] leading-[1.6] text-ice/60">
+            The principle at the centre of our mark and the benchmark for every system we construct.
+          </p>
+        </Card>
+      }
+    />
 
-          <div className="border-t border-[#DCE4EE]/10 divide-y divide-[#DCE4EE]/10 bg-[#05070B]/50 backdrop-blur-sm rounded-lg px-4 sm:px-6">
-            {milestones.map((m, i) => (
-              <div
-                key={i}
-                className="py-6 sm:py-8 flex flex-col md:flex-row md:items-baseline gap-4 md:gap-10 hover:bg-[#DCE4EE]/[0.03] px-3 -mx-3 rounded transition-colors"
-              >
-                <div
-                  className="font-mono text-base font-semibold tracking-wider w-24 shrink-0"
-                  style={{ color: accentColor }}
-                >
-                  {m.year}
-                </div>
-                <div className="md:w-[320px] shrink-0 font-medium text-lg text-white">
-                  {m.title}
-                </div>
-                <div className="flex-1 text-sm sm:text-base text-[#AEB7C3] leading-relaxed">
-                  {m.detail}
-                </div>
+    <Section
+      title="The founders."
+      lede="Priya Lalwani and Varad Ozarkar co-founded OMAV Global to bring strategy, technology and governance to the institutions shaping what comes next."
+    >
+      <div className="grid lg:grid-cols-2 gap-5">
+        {FOUNDERS.map((f) => (
+          <Card key={f.name} as="article" className="!p-8 sm:!p-10">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-display text-[26px] sm:text-[30px] leading-tight text-ice">{f.name}</h3>
+                <Mono className="mt-2">Co-founder</Mono>
               </div>
-            ))}
-          </div>
-
-          {/* Closing Mandate Callout */}
-          <div className="mt-16 p-8 sm:p-12 border border-[#DCE4EE]/14 rounded-lg bg-[#080B12]/80 backdrop-blur-md text-center flex flex-col items-center shadow-2xl shadow-black/80">
-            <div className="font-sanskrit text-2xl sm:text-3xl text-white">
-              ॥ अधिकाराणां कृते ॥
+              <span
+                aria-hidden="true"
+                className="grid place-items-center w-12 h-12 rounded-full font-display text-[15px] text-abyss bg-ice shrink-0"
+              >
+                {f.name
+                  .split(' ')
+                  .map((w) => w[0])
+                  .join('')}
+              </span>
             </div>
-            <div className="text-sm font-mono text-[#8CC8D8] mt-2">
-              For the sake of rights
+            <div className="mt-6 pb-6 border-b border-hairline font-mono text-[11.5px] text-signal">{f.focus}</div>
+            <div className="mt-6 space-y-4 text-[15.5px] leading-[1.7] text-ice/72">
+              {f.bio.map((para) => (
+                <p key={para.slice(0, 24)}>{para}</p>
+              ))}
             </div>
-            <p className="mt-4 text-sm sm:text-base text-[#AEB7C3] max-w-xl leading-relaxed">
-              Whether structuring constitutional artificial intelligence, state cyber-safety defense networks, or international technology transfer, our work is grounded in legal precision and democratic accountability.
-            </p>
-            <button
-              onClick={onRequestBriefing}
-              className="mt-8 px-8 py-3.5 bg-[#E9EDF3] text-[#05070B] text-xs font-medium uppercase tracking-wider rounded-[3px] hover:bg-white transition-colors cursor-pointer"
-            >
-              Connect With Our Partners
-            </button>
-          </div>
-        </div>
+          </Card>
+        ))}
       </div>
-    </div>
-  );
-};
+    </Section>
+
+    <Section
+      title="Recognition and public impact."
+      lede="Demonstrated execution across state administrations and global forums."
+    >
+      <ol className="relative border-l border-hairline ml-1.5">
+        {MILESTONES.map((m) => (
+          <li key={m.year} className="relative pl-8 sm:pl-12 pb-10 last:pb-0">
+            <span
+              aria-hidden="true"
+              className="absolute -left-[5px] top-2 w-[9px] h-[9px] rounded-full bg-abyss shadow-[inset_0_0_0_2px_var(--color-signal)]"
+            />
+            <div className="grid md:grid-cols-[96px_minmax(0,4fr)_minmax(0,7fr)] gap-x-8 gap-y-2">
+              <span className="font-mono text-[14px] text-signal pt-0.5">{m.year}</span>
+              <h3 className="font-display text-[18px] sm:text-[20px] leading-[1.25] text-ice">{m.title}</h3>
+              <p className="text-[15.5px] leading-[1.65] text-ice/65 max-w-[620px]">{m.detail}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </Section>
+
+    <CtaBand
+      title="Grounded in legal precision and democratic accountability."
+      body="Whether structuring constitutional AI, state cyber-safety networks or international technology transfer, speak directly with our partners."
+      action="Connect with our partners"
+      onAction={onRequestBriefing}
+    />
+  </div>
+</div>
+);

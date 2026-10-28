@@ -1,84 +1,51 @@
 import React from 'react';
-import { ArrowRight, Mail, MapPin } from 'lucide-react';
+import { ArrowUpRight, Mail, MapPin } from 'lucide-react';
+import { Card, Container, Mono } from './page/PageParts';
 
 interface ContactSectionProps {
   accentColor?: string;
   onRequestBriefing: () => void;
 }
 
-export const ContactSection: React.FC<ContactSectionProps> = ({
-  accentColor = '#8CC8D8',
-  onRequestBriefing,
-}) => {
-  return (
-    <section
-      id="contact"
-      className="relative z-10 bg-[#05070B] py-28 sm:py-40 border-t border-[#DCE4EE]/6"
-    >
-      <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-14">
-        <div className="flex items-center gap-3.5 text-xs tracking-[0.3em] text-[#9AA4B2] font-mono">
-          <span
-            className="block w-7 h-[1px]"
-            style={{ backgroundColor: accentColor }}
-          />
-          <span>CONTACT</span>
-        </div>
-
-        <h2 className="mt-6 text-4xl sm:text-6xl lg:text-[88px] font-medium tracking-[-0.04em] leading-[1] text-[#F2F5F9]">
-          Begin a conversation.
-        </h2>
-
-        <div className="mt-14 sm:mt-18 flex flex-col lg:flex-row lg:items-end justify-between gap-12">
-          <p className="max-w-[460px] text-lg text-[#9AA4B2] leading-relaxed">
-            For advisory mandates, public systems modernization, research collaborations, and speaking enquiries, write to us directly.
+// Contact details under each inner page; the page's own call to action sits above
+export const ContactSection: React.FC<ContactSectionProps> = ({ onRequestBriefing }) => (
+  <section id="contact" className="relative z-10 pb-24 sm:pb-32">
+    <Container>
+      <div className="grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-10 lg:gap-16 items-end">
+        <div>
+          <h2 className="text-[clamp(30px,3.6vw,52px)] leading-[1.02] text-ice">Begin a conversation.</h2>
+          <p className="mt-5 max-w-[440px] text-[16px] leading-[1.65] text-ice/65">
+            For advisory mandates, public systems modernization, research collaborations and speaking enquiries, write
+            to us directly.
           </p>
-
-          <div className="flex flex-wrap gap-10 sm:gap-16">
-            <div>
-              <div className="flex items-center gap-2 text-xs font-mono tracking-[0.24em] text-[#8C96A6]">
-                <Mail size={13} className="text-[#8CC8D8]" />
-                <span>DIRECT ADVISORY DESK</span>
-              </div>
-              <a
-                href="mailto:contact@omavglobal.com"
-                className="inline-flex items-center min-h-[44px] mt-2 text-xl sm:text-2xl font-medium text-[#E9EDF3] hover:text-white border-b border-[#DCE4EE]/30 transition-colors"
-              >
-                contact@omavglobal.com
-              </a>
-            </div>
-
-            <div>
-              <div className="flex items-center gap-2 text-xs font-mono tracking-[0.24em] text-[#8C96A6]">
-                <MapPin size={13} className="text-[#8CC8D8]" />
-                <span>OFFICE & HUBS</span>
-              </div>
-              <div className="flex items-center min-h-[44px] mt-2 text-xl sm:text-2xl text-[#E9EDF3] font-medium">
-                New York · Mumbai
-              </div>
-            </div>
-          </div>
         </div>
-
-        <div className="mt-14 flex flex-wrap gap-4 items-center">
-          <button
-            onClick={onRequestBriefing}
-            className="inline-flex items-center gap-2.5 h-12 px-7 rounded-[3px] bg-[#E9EDF3] text-[#05070B] text-sm font-medium tracking-wide transition-all duration-200 hover:bg-white hover:shadow-lg hover:shadow-white/10 cursor-pointer group"
-          >
-            <span>Write to OMAV</span>
-            <ArrowRight
-              size={15}
-              className="transition-transform duration-200 group-hover:translate-x-1"
-            />
+        <div className="grid sm:grid-cols-2 gap-5">
+          <Card className="!p-7">
+            <a href="mailto:contact@omavglobal.com" className="group block rounded-[7px]">
+              <Mono className="flex items-center gap-2">
+                <Mail size={13} className="text-signal" aria-hidden="true" /> Advisory desk
+              </Mono>
+              <span className="mt-4 flex items-center justify-between gap-3 font-display text-[18px] sm:text-[20px] text-ice">
+                contact@omavglobal.com
+                <ArrowUpRight
+                  size={18}
+                  className="text-slate group-hover:text-ice transition-[color,transform] duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                  aria-hidden="true"
+                />
+              </span>
+            </a>
+          </Card>
+          <Card className="!p-7">
+            <Mono className="flex items-center gap-2">
+              <MapPin size={13} className="text-signal" aria-hidden="true" /> Offices
+            </Mono>
+            <div className="mt-4 font-display text-[18px] sm:text-[20px] text-ice">New York · Mumbai</div>
+          </Card>
+          <button type="button" onClick={onRequestBriefing} className="btn btn-ghost sm:col-span-2 justify-center">
+            Write to OMAV through the briefing form
           </button>
-
-          <a
-            href="mailto:contact@omavglobal.com"
-            className="inline-flex items-center gap-2 h-12 px-6 rounded-[3px] border border-[#E9EDF3]/20 text-[#AEB7C3] hover:text-white hover:border-[#E9EDF3]/50 text-sm font-medium transition-colors"
-          >
-            Open Mail Client
-          </a>
         </div>
       </div>
-    </section>
-  );
-};
+    </Container>
+  </section>
+);
