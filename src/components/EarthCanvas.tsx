@@ -14,6 +14,8 @@ import type { GlobeApi, GlobeHome } from './population/PopulationGlobe';
 // The real, data-bearing Earth. The Three.js Earth below carries the logo intro
 // and hands over to it once it has settled in the hero position.
 const PopulationGlobe = lazy(() => import('./population/PopulationGlobe'));
+// The Solutions page's star field, behind the Earth through the hero and story
+const Galaxy = lazy(() => import('./ui/Galaxy'));
 const HANDOFF_S = 1.6;
 // Story path: which side the globe takes for each scene (-1 left, 1 right; the
 // text sits opposite) and the longitude it turns to face
@@ -42,6 +44,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
   const [explore, setExplore] = useState(false);
   const [suspended, setSuspended] = useState(false);
   const cesiumLayerRef = useRef<HTMLDivElement | null>(null);
+  const galaxyRef = useRef<HTMLDivElement | null>(null);
   const cesiumReady = useRef(false);
   const globeApi = useRef<GlobeApi | null>(null);
 
@@ -854,6 +857,12 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
         if (cl.style.pointerEvents !== pe) cl.style.pointerEvents = pe;
       }
       renderer.domElement.style.pointerEvents = handoff > 0.5 ? 'none' : 'auto';
+      // Stars come up once the intro has handed over: quieter at the hero, full in the story
+      const gl = galaxyRef.current;
+      if (gl) {
+        const go = (handoff * (0.55 + 0.45 * storyK)).toFixed(3);
+        if (gl.style.opacity !== go) gl.style.opacity = go;
+      }
       const susp = u > 0.03;
       if (susp !== wasSuspended) {
         wasSuspended = susp;
@@ -1141,6 +1150,33 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       className="sticky top-0 h-[100vh] w-full overflow-hidden z-0 bg-[#05070B] pointer-events-auto"
       style={{ touchAction: 'pan-y' }}
     >
+      <div ref={galaxyRef} className="absolute inset-0 pointer-events-none" style={{ opacity: 0 }} aria-hidden="true">
+        <Suspense fallback={null}>
+          <Galaxy
+            density={1}
+            glowIntensity={0.3}
+            flareIntensity={1}
+            starSpeed={0.5}
+            mouseRepulsion
+            clickWarp
+            starColors={[]}
+            hueShift={140}
+            saturation={0}
+            starSize={1}
+            twinkleIntensity={0.3}
+            speed={1}
+            rotationSpeed={0.1}
+            layers={4}
+            direction="forward"
+            repulsionStrength={2}
+            mouseInteraction
+            intro
+            lightMode={false}
+            dpr={1}
+          />
+        </Suspense>
+      </div>
+
       {/* Logo intro: the emblem builds here, beneath the globe */}
       <LogoIntro />
 
