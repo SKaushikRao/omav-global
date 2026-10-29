@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CtaBand, Mono, PageBackdrop, PageHero, Section } from '../components/page/PageParts';
 import Galaxy from '../components/ui/Galaxy';
+import CardSwap, { Card as SwapCard, type CardSwapHandle } from '../components/ui/CardSwap';
 
 interface AboutPageProps {
   accentColor?: string;
@@ -158,6 +159,85 @@ const Founders: React.FC = () => {
   );
 };
 
+// Recognition as a stack of cards, one per milestone, with the years beside it
+// as an index that follows the front card and jumps to any other
+const Milestones: React.FC = () => {
+  const swapRef = React.useRef<CardSwapHandle | null>(null);
+  const [front, setFront] = React.useState(0);
+
+  return (
+    <div className="grid lg:grid-cols-[minmax(0,4fr)_minmax(0,7fr)] gap-10 lg:gap-16 items-center">
+      <ol className="order-2 lg:order-1 grid gap-1">
+        {MILESTONES.map((m, i) => (
+          <li key={m.year}>
+            <button
+              type="button"
+              onClick={() => swapRef.current?.goTo(i)}
+              aria-current={front === i ? 'true' : undefined}
+              className={`group w-full grid grid-cols-[64px_minmax(0,1fr)] items-baseline gap-4 rounded-[10px] px-4 py-3.5 text-left transition-[background-color,color] duration-300 cursor-pointer ${
+                front === i ? 'bg-ice/[0.06]' : 'hover:bg-ice/[0.03]'
+              }`}
+            >
+              <span className={`font-mono text-[13px] transition-colors duration-300 ${front === i ? 'text-signal' : 'text-slate'}`}>
+                {m.year}
+              </span>
+              <span
+                className={`text-[15.5px] leading-[1.35] transition-colors duration-300 ${
+                  front === i ? 'text-ice' : 'text-ice/55 group-hover:text-ice/80'
+                }`}
+              >
+                {m.title}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ol>
+
+      <div className="order-1 lg:order-2 h-[300px] sm:h-[440px] lg:h-[500px]">
+        <CardSwap
+          ref={swapRef}
+          theme="omav"
+          width={480}
+          height={330}
+          cardDistance={56}
+          verticalDistance={62}
+          depth={90}
+          skewAmount={5}
+          visibleCards={4}
+          cardRadius={18}
+          delay={5000}
+          speed={1}
+          bounce={0.3}
+          parallax={0.4}
+          hoverSpread={0.1}
+          dim={0.55}
+          autoplay
+          pauseOnHover
+          draggable
+          onChange={setFront}
+          ariaLabel="Recognition and public impact"
+        >
+          {MILESTONES.map((m, i) => (
+            <SwapCard key={m.year}>
+              <article className="flex h-full flex-col p-7 sm:p-8">
+                <div className="flex items-center justify-between font-mono text-[11.5px] text-slate">
+                  <span>
+                    <span className="text-signal">0{i + 1}</span> / 0{MILESTONES.length}
+                  </span>
+                  <span>Recognition</span>
+                </div>
+                <div className="mt-4 font-display text-[40px] leading-none text-signal">{m.year}</div>
+                <h3 className="mt-3 font-display text-[20px] leading-[1.25] text-ice">{m.title}</h3>
+                <p className="mt-auto pt-3 text-[14px] leading-[1.55] text-ice/65">{m.detail}</p>
+              </article>
+            </SwapCard>
+          ))}
+        </CardSwap>
+      </div>
+    </div>
+  );
+};
+
 export const AboutPage: React.FC<AboutPageProps> = ({ onRequestBriefing }) => (
   <div className="relative text-ice">
       <PageBackdrop>
@@ -219,21 +299,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onRequestBriefing }) => (
       title="Recognition and public impact."
       lede="Demonstrated execution across state administrations and global forums."
     >
-      <ol className="relative border-l border-hairline ml-1.5">
-        {MILESTONES.map((m) => (
-          <li key={m.year} className="relative pl-8 sm:pl-12 pb-10 last:pb-0">
-            <span
-              aria-hidden="true"
-              className="absolute -left-[5px] top-2 w-[9px] h-[9px] rounded-full bg-abyss shadow-[inset_0_0_0_2px_var(--color-signal)]"
-            />
-            <div className="grid md:grid-cols-[96px_minmax(0,4fr)_minmax(0,7fr)] gap-x-8 gap-y-2">
-              <span className="font-mono text-[14px] text-signal pt-0.5">{m.year}</span>
-              <h3 className="font-display text-[18px] sm:text-[20px] leading-[1.25] text-ice">{m.title}</h3>
-              <p className="text-[15.5px] leading-[1.65] text-ice/65 max-w-[620px]">{m.detail}</p>
-            </div>
-          </li>
-        ))}
-      </ol>
+      <Milestones />
     </Section>
 
     <CtaBand
