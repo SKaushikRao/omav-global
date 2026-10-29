@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import { OmavMark } from './OmavMark';
 import PillNav from './ui/PillNav';
+import { GestureToggle } from './GestureControl';
 
 interface NavbarProps {
   currentPage: string;
@@ -88,12 +89,15 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, onReque
             }
           />
         </div>
-        <button type="button" onClick={onRequestBriefing} className="btn btn-primary btn-sm shrink-0">
-          Contact
-          <span className="btn-icon" aria-hidden="true">
-            <ArrowUpRight size={15} />
-          </span>
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {currentPage === 'home' && <GestureToggle />}
+          <button type="button" onClick={onRequestBriefing} className="btn btn-primary btn-sm shrink-0">
+            Contact
+            <span className="btn-icon" aria-hidden="true">
+              <ArrowUpRight size={15} />
+            </span>
+          </button>
+        </div>
       </div>
     </header>
   );

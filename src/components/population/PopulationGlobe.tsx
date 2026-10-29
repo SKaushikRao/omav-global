@@ -33,6 +33,7 @@ import {
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import { Crosshair, Expand, Minus, Moon, Plus, Shrink, SlidersHorizontal, Sun, X } from 'lucide-react';
 import RubberSegment from '../ui/RubberSegment';
+import { gestureBridge } from '../../lib/gestureBridge';
 import {
   buildLut,
   cellAreaKm2,
@@ -111,6 +112,8 @@ export interface GlobeView {
   dx?: number;
   dy?: number;
   r?: number;
+  // Track that placement at the hero too (gesture control centres and zooms it)
+  track?: boolean;
 }
 
 export interface GlobeApi {
@@ -226,6 +229,7 @@ export default function PopulationGlobe({
   const [basemap, setBasemap] = useState<Basemap>('styled');
   const [showCities, setShowCities] = useState(true);
   const [readout, setReadout] = useState<Readout | null>(null);
+  const [gesture, setGesture] = useState(gestureBridge.active);
   const [active, setActive] = useState(false); // wheel/touch go to the globe
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement | null>(null);
@@ -440,7 +444,7 @@ export default function PopulationGlobe({
         const prev = lastView.current;
         lastView.current = v;
         if (touched.current || flying.current) return;
-        const tracking = suspendedRef.current && v.r !== undefined;
+        const tracking = (suspendedRef.current || !!v.track) && v.r !== undefined;
         // The idle drift is slow: skip frames where nothing visibly moved
         if (
           prev &&
@@ -455,7 +459,7 @@ export default function PopulationGlobe({
         const H = scene.canvas.clientHeight || 1;
         let r = homeRef.current?.r ?? H * 0.42;
         if (tracking) {
-          // In the story: sit exactly where the story Earth is
+          // In the story (or under gesture control): sit exactly where the story Earth is
           r = v.r!;
           const box = boxRef.current;
           if (box) {
@@ -814,6 +818,20 @@ export default function PopulationGlobe({
     flying.current = false;
   }, [suspended]);
 
+  // Gesture control drives the camera: hand it back to the follow path
+  useEffect(
+    () =>
+      gestureBridge.subscribe((on) => {
+        setGesture(on);
+        if (!on) return;
+        touched.current = false;
+        flying.current = false;
+        viewerRef.current?.camera.cancelFlight();
+        setMoreOpen(false);
+      }),
+    []
+  );
+
   // "More" closes on Escape or a click outside it
   useEffect(() => {
     if (!moreOpen) return;
@@ -922,7 +940,7 @@ export default function PopulationGlobe({
         {/* Dock: zoom, day/night and more, centred under the globe */}
         <div
           className="absolute z-10 bottom-6 -translate-x-1/2 transition-[left] duration-[900ms] ease-[cubic-bezier(.22,.7,.2,1)]"
-          style={{ left: home && !explore ? `calc(50% + ${home.dx}px)` : '50%' }}
+          style={{ left: home && !explore && !gesture ? `calc(50% + ${home.dx}px)` : '50%' }}
         >
           {moreOpen && (
             <div

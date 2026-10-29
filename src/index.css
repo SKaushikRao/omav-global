@@ -288,6 +288,118 @@ html.omav-exploring header:hover {
   opacity: 1;
 }
 
+/* Gesture control: the hero copy clears off the centred globe */
+.omav-hero-copy {
+  transition:
+    opacity 0.8s ease,
+    transform 1.4s var(--ease-out-quint);
+}
+html.omav-gesture .omav-hero-copy {
+  opacity: 0 !important;
+  transform: translateX(max(-40px, -3vw));
+  pointer-events: none !important;
+}
+.omav-gesture-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-ctl);
+  color: var(--color-ice);
+  background: rgb(11 16 24 / 0.72);
+  box-shadow: inset 0 0 0 1px rgb(233 237 243 / 0.16);
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-ui) var(--ease-out-quint),
+    box-shadow var(--dur-ui) var(--ease-out-quint),
+    color var(--dur-ui) var(--ease-out-quint),
+    transform 160ms var(--ease-out-quint);
+}
+.omav-gesture-btn:hover {
+  box-shadow: inset 0 0 0 1px rgb(233 237 243 / 0.42);
+}
+.omav-gesture-btn:active {
+  transform: scale(0.95);
+}
+.omav-gesture-btn.is-on {
+  color: var(--color-abyss);
+  background: var(--color-signal);
+  box-shadow: none;
+}
+.omav-gesture-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-abyss);
+  animation: omavGestureBlink 1.6s ease-in-out infinite;
+}
+@keyframes omavGestureBlink {
+  50% {
+    opacity: 0.25;
+  }
+}
+.omav-gesture-panel {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 60;
+  width: 232px;
+  border-radius: 12px;
+  background: rgb(11 16 24 / 0.86);
+  box-shadow:
+    inset 0 0 0 1px rgb(220 228 238 / 0.12),
+    0 18px 40px -12px rgb(0 0 0 / 0.6);
+  backdrop-filter: blur(14px);
+  animation: omavGestureIn 0.5s var(--ease-out-quint) both;
+}
+@keyframes omavGestureIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+/* Collapsing body: the camera keeps running while it is folded away */
+.omav-gesture-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.45s var(--ease-out-quint);
+}
+.omav-gesture-panel.is-min .omav-gesture-body {
+  grid-template-rows: 0fr;
+}
+.omav-gesture-body > div {
+  min-height: 0;
+  overflow: hidden;
+}
+.omav-gesture-panel.is-min {
+  width: auto;
+  max-width: 280px;
+}
+.omav-gesture-x {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--color-slate);
+  cursor: pointer;
+}
+.omav-gesture-x:hover {
+  color: var(--color-ice);
+  background: rgb(233 237 243 / 0.07);
+}
+@media (prefers-reduced-motion: reduce) {
+  .omav-gesture-dot,
+  .omav-gesture-panel {
+    animation: none;
+  }
+}
+
 /* Imagery and data credits, required by the providers: small and quiet */
 .omav-cesium-credits {
   font-size: 10px;

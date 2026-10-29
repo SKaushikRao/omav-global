@@ -20,6 +20,12 @@ export default defineConfig(() => {
             dest: cesiumBaseUrl,
             rename: {stripBase: 4}, // keep paths from Workers/, Assets/, …
           },
+          // MediaPipe's hand tracker runtime, loaded when gesture control turns on
+          {
+            src: 'node_modules/@mediapipe/tasks-vision/wasm/vision_wasm*_internal.{js,wasm}',
+            dest: 'mediapipe',
+            rename: {stripBase: true},
+          },
         ],
       }),
     ],

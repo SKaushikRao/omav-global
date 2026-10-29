@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { introBridge, K, TL } from '../lib/introBridge';
+import { gestureBridge } from '../lib/gestureBridge';
 import { LogoIntro } from './LogoIntro';
 import { ErrorBoundary } from './ErrorBoundary';
 import { brainAmount, createStory, SCENES } from './story/storyScenes';
@@ -58,6 +59,9 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       html.classList.remove('omav-exploring');
     };
   }, [explore]);
+
+  // Gesture control takes the globe to the centre; explore mode steps aside
+  useEffect(() => gestureBridge.subscribe((on) => on && setExplore(false)), []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -721,6 +725,12 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
     const WORLD_UP = new THREE.Vector3(0, 1, 0);
     let wasSuspended = false;
     let autoAngle = 0;
+    // Gesture control: how far the hero has moved to its centred framing, and
+    // the eased two-hand zoom
+    let gk = 0;
+    let gz = 1;
+    let gYaw = 0;
+    let gPitch = 0;
 
     // Surface point facing the viewer, and the screen roll of the north axis
     function facing() {
@@ -866,6 +876,16 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       pmx += (mx - pmx) * pk;
       pmy += (my - pmy) * pk;
 
+      const gOn = gestureBridge.active;
+      gk += ((gOn ? 1 : 0) - gk) * (1 - Math.exp(-dt * 1.4));
+      if (Math.abs(gk - (gOn ? 1 : 0)) < 1e-4) gk = gOn ? 1 : 0;
+      gz += ((gOn ? gestureBridge.zoom : 1) - gz) * (1 - Math.exp(-dt * 5));
+      // Open-palm turn, at the hero only: it eases out as the story takes over
+      gestureBridge.atHero = u < 0.03;
+      const gr = 1 - Math.exp(-dt * 4);
+      gYaw += (gestureBridge.yaw - gYaw) * gr;
+      gPitch += (gestureBridge.pitch - gPitch) * gr;
+
       // Idle spin at the hero; it stops as soon as the scroll begins
       autoAngle += dt * (prefersReducedMotion ? 0.008 : 0.028) * (1 - sm(0, 0.04, u));
 
@@ -878,7 +898,8 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       // its own framing (zoom); every move turns the Earth forward.
       const sideX = (i: number, z: number) => SIDES[i] * hw * (0.5 + (z - 1) * 0.08);
       const keys = [
-        { u: 0, x: L.gx, y: L.gy, s: L.gs, a: autoAngle },
+        // With gestures on, the hero Earth takes the centre, a touch larger
+        { u: 0, x: L.gx * (1 - gk), y: L.gy * (1 - gk), s: L.gs * (1 + 0.1 * gk), a: autoAngle },
         {
           u: A.how,
           x: wide ? hw * 0.34 : 0,
@@ -924,7 +945,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       const dip = k0.x !== k1.x ? travel * hh * (wide ? 0.14 : 0.06) : 0;
       const storyY = k0.y + (k1.y - k0.y) * f - dip;
       // Pull back mid-move, then settle into the next framing
-      const storyS = (k0.s + (k1.s - k0.s) * f) * (1 - 0.1 * travel);
+      const storyS = (k0.s + (k1.s - k0.s) * f) * (1 - 0.1 * travel) * gz;
       // Gentle drift while a scene holds, so the Earth never sits still
       const drift = k0 === k1 ? 0 : 0.1 * Math.sin((2 * Math.PI * (u - k0.u)) / Math.max(0.2, gap));
       const storyAngle = k0.a + (k1.a - k0.a) * f + drift * storyK;
@@ -934,7 +955,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       // Side scrims follow the text, which sits opposite the globe
       if (scrimLRef.current && scrimRRef.current) {
         const side = wide ? Math.max(-1, Math.min(1, storyX / (hw * 0.5))) : 1;
-        const lK = u < A.how ? 1 : Math.max(0, side);
+        const lK = (u < A.how ? 1 : Math.max(0, side)) * (1 - gk * (1 - storyK));
         const rK = u < A.how ? 0 : Math.max(0, -side);
         scrimLRef.current.style.opacity = lK.toFixed(3);
         scrimRRef.current.style.opacity = rK.toFixed(3);
@@ -982,9 +1003,10 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       }
       SUN.copy(SUN_I).lerp(SUN_H, sunK).normalize();
 
-      spin.rotation.y = BASE + storyAngle + rotOff + yaw;
+      const heroK = 1 - storyK;
+      spin.rotation.y = BASE + storyAngle + rotOff + yaw + gYaw * heroK;
       root.rotation.y = pmx * 0.08 * kPar;
-      root.rotation.x = (pmy * 0.05 + pitch) * kPar;
+      root.rotation.x = (pmy * 0.05 + pitch) * kPar + gPitch * heroK;
       root.rotation.z = lean;
       root.position.set(gx, gy, 0);
       root.scale.setScalar(gsc);
@@ -1053,6 +1075,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
           dx: gx / wpp,
           dy: -gy / wpp,
           r: gsc / wpp,
+          track: gk > 0 || gz !== 1,
         });
       }
 
