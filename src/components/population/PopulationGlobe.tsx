@@ -14,6 +14,7 @@ import {
   ImageryLayer,
   Ion,
   LabelStyle,
+  Material,
   Math as CMath,
   NearFarScalar,
   PerspectiveFrustum,
@@ -63,6 +64,83 @@ import {
 
 const ION_TOKEN = import.meta.env.VITE_CESIUM_ION_TOKEN as string | undefined;
 const DAY_TEX = '/assets/aistudio/2419145b1a56f93908364cdba80a4980_af3c5cdd.jpg';
+// Water mask shared with the intro Earth (white = water)
+const WATER_TEX = '/assets/aistudio/a64b4424f88198be764305fdc0d57f25.jpg';
+
+// Surface shading in the manner of the intro Earth. Cesium's own day/night
+// lighting is nearly flat across the whole lit side (lambert × 5 + 0.3), so
+// the globe reads as a disc; this adds what gives a sphere its volume: light
+// falling off from the sunlit point to the terminator, a darker limb, and a
+// sun glint on open water. It is blended over the imagery before Cesium's
+// lighting, and leaves the night side (and its city lights) alone.
+// (Cesium drops a globe material that reads the input normal unless the
+// terrain has vertex normals, which the plain ellipsoid lacks, so the
+// surface normal is rebuilt here from the surface position.)
+const SHADE_GLSL = `
+czm_material czm_getMaterial(czm_materialInput materialInput) {
+  czm_material m = czm_getDefaultMaterial(materialInput);
+  vec3 g = normalize((czm_inverseView * vec4(-materialInput.positionToEyeEC, 1.0)).xyz);
+  vec3 n = normalize(mat3(czm_view) * g);
+  vec3 v = normalize(materialInput.positionToEyeEC);
+  vec3 l = normalize(czm_lightDirectionEC);
+  float ndl = dot(n, l);
+  float nv = clamp(dot(n, v), 0.0, 1.0);
+
+  // Water from the shared mask (equirectangular, looked up from the surface position)
+  vec2 uv = vec2(atan(g.y, g.x) / czm_twoPi + 0.5, asin(clamp(g.z, -1.0, 1.0)) / czm_pi + 0.5);
+  float water = smoothstep(0.45, 0.75, texture(waterMask, uv).r);
+
+  float day = smoothstep(-0.04, 0.18, ndl);
+  // Gradual falloff towards the terminator, and a darker rim
+  float shade = (1.0 - smoothstep(0.0, 0.95, ndl)) * falloff + pow(1.0 - nv, 2.4) * limb;
+  shade = clamp(shade, 0.0, 0.88) * day;
+  // Sun glint: a broad soft sheen and a tighter highlight, on water only
+  vec3 h = normalize(l + v);
+  float nh = max(dot(n, h), 0.0);
+  float glint = water * day * (pow(nh, 14.0) * 0.10 + pow(nh, 90.0) * 0.38) * glintStrength;
+
+  float a = clamp(max(shade, glint), 0.0, 1.0);
+  m.alpha = a;
+  m.diffuse = a > 0.0 ? clamp(vec3(0.74, 0.86, 1.0) * glint / a, 0.0, 1.0) : vec3(0.0);
+  return m;
+}
+`;
+
+const loadImage = (src: string) =>
+  new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+
+// Ocean-only overlay: the day photo's own sea (Blue Marble: deep navy, teal
+// shallows), transparent over land, graded far more lightly than the land so
+// the dimmed overview no longer turns the oceans near-black
+async function buildOceanImage(): Promise<string> {
+  const [day, water] = await Promise.all([loadImage(DAY_TEX), loadImage(WATER_TEX)]);
+  const W = water.naturalWidth;
+  const H = water.naturalHeight;
+  const c = document.createElement('canvas');
+  c.width = W;
+  c.height = H;
+  const ctx = c.getContext('2d', { willReadFrequently: true })!;
+  ctx.drawImage(day, 0, 0, W, H);
+  const d = ctx.getImageData(0, 0, W, H);
+  ctx.clearRect(0, 0, W, H);
+  ctx.drawImage(water, 0, 0, W, H);
+  const w = ctx.getImageData(0, 0, W, H).data;
+  const px = d.data;
+  for (let i = 0; i < px.length; i += 4) {
+    // Clean the JPEG mask; thin rivers (faint grey) stay land
+    const m = Math.min(1, Math.max(0, (w[i] / 255 - 0.45) / 0.3));
+    px[i + 3] = m * m * (3 - 2 * m) * 255;
+  }
+  ctx.putImageData(d, 0, 0);
+  const blob = await new Promise<Blob | null>((res) => c.toBlob(res, 'image/png'));
+  if (!blob) throw new Error('Ocean layer could not be encoded');
+  return URL.createObjectURL(blob);
+}
 const NIGHT_LIGHTS_URL =
   'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_Black_Marble/default/2016-01-01/GoogleMapsCompatible_Level8/{TileMatrix}/{TileRow}/{TileCol}.png';
 const ACCENT = Color.fromCssColorString('#8CC8D8');
@@ -189,6 +267,7 @@ export default function PopulationGlobe({
   const viewerRef = useRef<Viewer | null>(null);
   const layersRef = useRef<{
     dayTex?: ImageryLayer;
+    ocean?: ImageryLayer;
     base?: ImageryLayer;
     night?: ImageryLayer;
     pop?: ImageryLayer;
@@ -280,7 +359,7 @@ export default function PopulationGlobe({
     globe.dynamicAtmosphereLightingFromSun = false;
     globe.showGroundAtmosphere = true;
     globe.atmosphereLightIntensity = 16;
-    globe.atmosphereBrightnessShift = 0.15;
+    globe.atmosphereBrightnessShift = 0;
     // Keep lighting and the night side at every distance (Cesium fades them out far away)
     globe.lightingFadeOutDistance = 5e8;
     globe.lightingFadeInDistance = 1e9;
@@ -292,6 +371,15 @@ export default function PopulationGlobe({
       scene.skyAtmosphere.saturationShift = 0.05;
       scene.skyAtmosphere.brightnessShift = -0.2;
     }
+
+    globe.material = new Material({
+      fabric: {
+        type: 'OmavSurfaceShade',
+        uniforms: { waterMask: WATER_TEX, falloff: 0.62, limb: 0.42, glintStrength: 1 },
+        source: SHADE_GLSL,
+      },
+      translucent: false,
+    });
 
     const light = new DirectionalLight({ direction: new Cartesian3(1, 0, 0), intensity: 1.05 });
     scene.light = light;
@@ -348,6 +436,25 @@ export default function PopulationGlobe({
     viewer.imageryLayers.add(night);
     layersRef.current = { dayTex, base, night };
 
+    // Sea for the overview, slotted just above the day texture once it is built
+    let oceanUrl = '';
+    buildOceanImage()
+      .then((url) => {
+        oceanUrl = url;
+        if (viewer.isDestroyed()) return URL.revokeObjectURL(url);
+        const ocean = ImageryLayer.fromProviderAsync(SingleTileImageryProvider.fromUrl(url), {
+          brightness: 0.78,
+          saturation: 0.8,
+          contrast: 1.05,
+          nightAlpha: 0.12,
+        });
+        ocean.alpha = layersRef.current.dayTex?.alpha ?? 1;
+        viewer.imageryLayers.add(ocean, viewer.imageryLayers.indexOf(dayTex) + 1);
+        layersRef.current.ocean = ocean;
+        scene.requestRender();
+      })
+      .catch((err) => console.warn('Ocean layer', err));
+
     // If ion imagery fails (bad token, offline), fall back to the bundled open imagery
     base.errorEvent.addEventListener(() => {
       if (layersRef.current.base !== base || !viewerRef.current) return;
@@ -394,6 +501,7 @@ export default function PopulationGlobe({
         L.base.contrast = v.basemap === 'satellite' ? 1 : 1.1;
       }
       if (L.dayTex) L.dayTex.alpha = 1 - detail;
+      if (L.ocean) L.ocean.alpha = 1 - detail;
       if (L.night) L.night.show = v.nightLights;
       const popDetail = smoothstep(DETAIL_START * 0.85, DETAIL_FULL, h);
       if (L.pop) {
@@ -511,6 +619,7 @@ export default function PopulationGlobe({
       scene.postRender.removeEventListener(onPostRender);
       window.clearTimeout(readyTimer);
       viewer.destroy();
+      if (oceanUrl) URL.revokeObjectURL(oceanUrl);
       viewerRef.current = null;
       layersRef.current = {};
       dotsRef.current = null;
@@ -928,7 +1037,7 @@ export default function PopulationGlobe({
               height: home.r * 2.24,
               transform: 'translate(-50%, -50%)',
               background:
-                'radial-gradient(circle closest-side, rgba(127,180,214,0) 86%, rgba(127,180,214,0.6) 89.5%, rgba(100,155,210,0.22) 93.5%, rgba(80,130,200,0.06) 97%, rgba(80,130,200,0) 100%)',
+                'radial-gradient(circle closest-side, rgba(127,180,214,0) 86%, rgba(127,180,214,0.26) 89.5%, rgba(100,155,210,0.09) 93.5%, rgba(80,130,200,0.025) 97%, rgba(80,130,200,0) 100%)',
               WebkitMaskImage: 'linear-gradient(100deg, #000 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.08) 100%)',
               maskImage: 'linear-gradient(100deg, #000 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.08) 100%)',
             }}

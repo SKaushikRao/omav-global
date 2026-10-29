@@ -25,10 +25,10 @@ export const HeroSection: React.FC<HeroSectionProps> = () => {
 
           <p
             {...reveal('0.75s')}
-            className="mt-8 max-w-[540px] text-[17px] leading-[1.6] text-ice/75"
+            className="mt-7 max-w-[420px] text-[15.5px] sm:text-[16px] leading-[1.65] text-ice/65"
           >
-            We transform governance and public systems through AI-driven intelligence and technology, bridging
-            private innovation and public institutions so governments serve citizens more securely and efficiently.
+            AI-driven intelligence for governance and public systems, so institutions serve citizens more securely and
+            efficiently.
           </p>
 
           {/* Instrument readout: what the globe is showing */}

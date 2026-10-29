@@ -1150,6 +1150,8 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       className="sticky top-0 h-[100vh] w-full overflow-hidden z-0 bg-[#05070B] pointer-events-auto"
       style={{ touchAction: 'pan-y' }}
     >
+      {/* Star field behind the Earth: kept light (two layers, reduced resolution,
+          no pointer physics) since it draws every frame beside both globes */}
       <div ref={galaxyRef} className="absolute inset-0 pointer-events-none" style={{ opacity: 0 }} aria-hidden="true">
         <Suspense fallback={null}>
           <Galaxy
@@ -1157,8 +1159,6 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
             glowIntensity={0.3}
             flareIntensity={1}
             starSpeed={0.5}
-            mouseRepulsion
-            clickWarp
             starColors={[]}
             hueShift={140}
             saturation={0}
@@ -1166,13 +1166,14 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
             twinkleIntensity={0.3}
             speed={1}
             rotationSpeed={0.1}
-            layers={4}
+            layers={2}
             direction="forward"
-            repulsionStrength={2}
-            mouseInteraction
+            mouseInteraction={false}
+            mouseRepulsion={false}
+            clickWarp={false}
             intro
             lightMode={false}
-            dpr={1}
+            dpr={0.6}
           />
         </Suspense>
       </div>
