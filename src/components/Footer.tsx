@@ -1,5 +1,5 @@
 import React from 'react';
-import { OmavMark } from './OmavMark';
+import { OmavLockup } from './OmavMark';
 import { ArrowUp } from 'lucide-react';
 
 interface FooterProps {
@@ -22,16 +22,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
     <footer className="relative z-10 bg-[#05070B] border-t border-[#DCE4EE]/8 py-10 sm:py-12">
       <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-14 flex flex-col md:flex-row items-center justify-between gap-6 sm:gap-8">
         {/* Brand & Copyright */}
-        <div className="flex items-center gap-4">
-          <OmavMark width={32} height={24} idPrefix="footerMark" />
-          <div className="flex items-center gap-3">
-            <span className="font-jost text-sm tracking-[0.16em] font-medium text-white">
-              OMAV
-            </span>
-            <span className="text-xs text-[#8C96A6]">
-              © 2026 OMAV Global Consultancy Services
-            </span>
-          </div>
+        <div className="flex flex-col md:flex-row items-center gap-4 md:gap-5">
+          <OmavLockup size="sm" idPrefix="footerLockup" />
+          <span className="text-xs text-[#8C96A6] text-center md:text-left">
+            © 2026 OMAV Global Ventures Pvt. Ltd.
+          </span>
         </div>
 
         {/* Navigation links */}
@@ -77,14 +72,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <ArrowUp size={12} />
           </button>
         </nav>
-
-        {/* Sanskrit Motto */}
-        <div
-          lang="sa"
-          className="font-sanskrit text-sm sm:text-base text-[#AEB7C3] tracking-wide"
-        >
-          ॥ अधिकाराणां कृते ॥
-        </div>
       </div>
     </footer>
   );

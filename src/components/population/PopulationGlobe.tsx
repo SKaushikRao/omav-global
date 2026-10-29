@@ -470,7 +470,10 @@ export default function PopulationGlobe({
           const home = homeRef.current;
           if (haloRef.current && home) haloRef.current.style.transform = `translate(-50%, -50%) scale(${(r / home.r).toFixed(4)})`;
         }
-        camera.setView(viewAt(v.lat, v.lon, v.roll, heightForRadius(r, H)));
+        // A zero-size stage (mid-resize, hidden tab) gives no usable framing
+        const h = heightForRadius(r, H);
+        if (!Number.isFinite(h) || !Number.isFinite(v.lat) || !Number.isFinite(v.lon) || r < 1) return;
+        camera.setView(viewAt(v.lat, v.lon, v.roll, h));
         scene.requestRender();
       },
     };
@@ -665,7 +668,7 @@ export default function PopulationGlobe({
         },
         label: {
           text: c.name,
-          font: '500 12px Archivo, system-ui, sans-serif',
+          font: '500 12px Ranade, system-ui, sans-serif',
           fillColor: Color.fromCssColorString('#E9EDF3'),
           outlineColor: Color.fromCssColorString('#05070B'),
           outlineWidth: 3,

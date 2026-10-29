@@ -78,8 +78,8 @@ export const PageHero: React.FC<{
           {meta && (
             <ul className="mt-10 flex flex-wrap gap-x-6 gap-y-2 font-mono text-[12px] text-slate">
               {meta.map((m) => (
-                <li key={m} className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-signal" aria-hidden="true" />
+                <li key={m} className="flex gap-2.5">
+                  <Bullet />
                   {m}
                 </li>
               ))}
@@ -138,6 +138,10 @@ export const Card: React.FC<{ className?: string; children: React.ReactNode; as?
     {children}
   </SpotlightCard>
 );
+
+// The one bullet used across the site: a small signal dot, centred on the
+// first line of its item
+export const Bullet: React.FC = () => <span className="omav-bullet" aria-hidden="true" />;
 
 export const Mono: React.FC<{ className?: string; children: React.ReactNode }> = ({ className = '', children }) => (
   <div className={`font-mono text-[11.5px] text-slate ${className}`}>{children}</div>

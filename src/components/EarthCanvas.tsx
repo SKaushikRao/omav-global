@@ -880,6 +880,7 @@ export const EarthCanvas: React.FC<EarthCanvasProps> = ({
       gk += ((gOn ? 1 : 0) - gk) * (1 - Math.exp(-dt * 1.4));
       if (Math.abs(gk - (gOn ? 1 : 0)) < 1e-4) gk = gOn ? 1 : 0;
       gz += ((gOn ? gestureBridge.zoom : 1) - gz) * (1 - Math.exp(-dt * 5));
+      if (!gOn && Math.abs(gz - 1) < 1e-3) gz = 1;
       // Open-palm turn, at the hero only: it eases out as the story takes over
       gestureBridge.atHero = u < 0.03;
       const gr = 1 - Math.exp(-dt * 4);

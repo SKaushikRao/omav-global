@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CtaBand, Mono, PageBackdrop, PageHero, Section } from '../components/page/PageParts';
+import { CtaBand, Mono, PageBackdrop, PageHero, Section } from '../components/page/PageParts';
 import LightRays from '../components/ui/LightRays';
 
 interface ApproachPageProps {
@@ -91,14 +91,15 @@ export const ApproachPage: React.FC<ApproachPageProps> = ({ onRequestBriefing })
       title="What we bring to the table."
       lede="The four qualities institutions engage us for, and how each shows up in the work."
     >
-      <div className="grid md:grid-cols-2 gap-5">
+      {/* No boxes: the pillars float in the light falling from above */}
+      <div className="grid md:grid-cols-2 gap-x-16 gap-y-16 sm:gap-y-20">
         {PILLARS.map((p, i) => (
-          <Card key={p.title} className="!p-8 sm:!p-10 flex flex-col min-h-[300px]">
+          <div key={p.title} className="omav-lit flex flex-col">
             <Mono className="text-signal">0{i + 1}</Mono>
-            <h3 className="mt-6 uppercase text-[clamp(26px,2.6vw,38px)] leading-[1] tracking-[-0.02em] text-ice">{p.title}</h3>
-            <p className="mt-5 max-w-[460px] text-[17px] leading-[1.6] text-ice/75">{p.text}</p>
-            <p className="mt-auto pt-8 text-[14px] leading-[1.55] text-slate">{p.detail}</p>
-          </Card>
+            <h3 className="mt-5 uppercase text-[clamp(26px,2.6vw,38px)] leading-[1] tracking-[-0.02em] text-ice">{p.title}</h3>
+            <p className="mt-5 max-w-[460px] text-[17px] leading-[1.6] text-ice/80">{p.text}</p>
+            <p className="mt-6 max-w-[460px] text-[14px] leading-[1.55] text-ice/55">{p.detail}</p>
+          </div>
         ))}
       </div>
     </Section>

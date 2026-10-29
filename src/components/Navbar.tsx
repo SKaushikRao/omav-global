@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowUpRight } from 'lucide-react';
-import { OmavMark } from './OmavMark';
+import { OmavLockup } from './OmavMark';
 import PillNav from './ui/PillNav';
 import { GestureToggle } from './GestureControl';
 
@@ -55,11 +55,11 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onNavigate, onReque
         className="absolute inset-0 h-[110px] bg-gradient-to-b from-abyss/85 via-abyss/45 to-transparent pointer-events-none"
       />
       <div className="relative max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-14 h-[84px] flex items-center justify-between gap-4">
+        <NavAnchor href="#home" aria-label="OMAV, home" className="omav-nav-brand shrink-0 rounded-[8px]">
+          <OmavLockup size="nav" idPrefix="navLockup" />
+        </NavAnchor>
         <div className="min-w-0 flex-1">
           <PillNav
-            logo={<OmavMark width={26} height={19} idPrefix="pillnav" />}
-            logoAlt="OMAV Global, home"
-            logoHref="#home"
             items={NAV_ITEMS}
             activeHref={`#${currentPage}`}
             linkComponent={NavAnchor}

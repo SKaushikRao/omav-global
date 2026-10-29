@@ -2,10 +2,10 @@
 
 /* OMAV design tokens. Palette: Abyss (ground), Graphite (raised surface), Ice
    (ink), Slate (secondary ink), Signal (brand accent), Ember (data, city light).
-   Type: Archivo, expanded for display; JetBrains Mono for data and labels. */
+   Type: Ranade (Indian Type Foundry) throughout; JetBrains Mono for data and labels. */
 @theme {
-  --font-sans: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-display: 'Archivo', system-ui, sans-serif;
+  --font-sans: 'Ranade', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Ranade', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
 
   --color-abyss: #05070b;
@@ -35,7 +35,6 @@
     background: var(--color-abyss);
     color: var(--color-ice);
     font-family: var(--font-sans);
-    font-feature-settings: 'ss01', 'cv11';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: clip;
@@ -44,7 +43,6 @@
   h2,
   h3 {
     font-family: var(--font-display);
-    font-stretch: 125%;
     font-weight: 500;
     letter-spacing: -0.015em;
   }
@@ -54,16 +52,14 @@
   }
 }
 
-/* Display: Archivo at full width */
+/* Display: Ranade, medium weight */
 .font-display {
   font-family: var(--font-display);
-  font-stretch: 125%;
 }
-/* Wordmark (was Jost): Archivo expanded, tracked out */
+/* Wordmark: Ranade, tracked out */
 .font-jost {
   font-family: var(--font-display);
-  font-stretch: 125%;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 /* Components sit in Tailwind's components layer so utilities can override them */
@@ -450,3 +446,100 @@ html.omav-gesture .omav-hero-copy {
     padding: 32px;
   }
 }
+
+/* Registered so the cursor light fades in and out rather than snapping */
+@property --glow {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+/* Glass panel for the story scenes' text: frosted, lit along its top edge,
+   with a soft sheen, so the globe and its overlays read through it */
+.omav-glass {
+  --mx: 50%;
+  --my: 0%;
+  --glow: 0;
+  position: relative;
+  isolation: isolate;
+  transition: --glow 0.45s var(--ease-out-quint);
+  padding: clamp(22px, 2.6vw, 36px);
+  border-radius: 24px;
+  background:
+    linear-gradient(155deg, rgb(255 255 255 / 0.085) 0%, rgb(255 255 255 / 0.02) 42%, rgb(255 255 255 / 0.045) 100%),
+    rgb(9 13 20 / 0.34);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.22),
+    inset 0 -1px 0 rgb(255 255 255 / 0.05),
+    inset 0 0 0 1px rgb(255 255 255 / 0.09),
+    0 24px 60px -24px rgb(0 0 0 / 0.65);
+  -webkit-backdrop-filter: blur(18px) saturate(1.7) brightness(1.05);
+  backdrop-filter: blur(18px) saturate(1.7) brightness(1.05);
+}
+/* Specular rim: brighter at the top-left, fading round the edge */
+.omav-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 1px;
+  background:
+    radial-gradient(260px circle at var(--mx) var(--my), rgb(255 255 255 / calc(1 * var(--glow))), rgb(140 200 216 / calc(0.5 * var(--glow))) 35%, transparent 70%),
+    linear-gradient(140deg, rgb(255 255 255 / 0.45), rgb(255 255 255 / 0.04) 38%, rgb(255 255 255 / 0) 60%, rgb(140 200 216 / 0.22));
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+/* Cursor light: a soft pool inside the glass, following the pointer; the
+   rim above brightens where the light meets it */
+.omav-glass::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background:
+    radial-gradient(340px circle at var(--mx) var(--my), rgb(255 255 255 / 0.17), rgb(140 200 216 / 0.07) 42%, transparent 72%);
+  opacity: var(--glow);
+  pointer-events: none;
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .omav-glass {
+    background: rgb(11 16 24 / 0.86);
+  }
+}
+
+.omav-bullet {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-top: calc(0.75em - 3px);
+  border-radius: 999px;
+  background: var(--color-signal);
+  box-shadow: 0 0 0 3px rgb(140 200 216 / 0.12);
+}
+
+/* Founders track on phones: swipe between the two, no scrollbar */
+.omav-founders {
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.omav-founders::-webkit-scrollbar {
+  display: none;
+}
+
+/* Text standing in the Approach page's light rays: a faint glow from above,
+   and a dark halo that keeps it legible where the rays are brightest */
+.omav-lit h3 {
+  text-shadow:
+    0 -1px 18px rgb(255 255 255 / 0.18),
+    0 2px 24px rgb(5 7 11 / 0.85);
+}
+.omav-lit p {
+  text-shadow: 0 1px 16px rgb(5 7 11 / 0.9);
+}
+

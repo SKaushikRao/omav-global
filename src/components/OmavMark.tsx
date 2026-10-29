@@ -65,3 +65,33 @@ export const OmavMark: React.FC<OmavMarkProps> = ({
     </svg>
   );
 };
+
+// The full logo, as on the mark artwork: emblem, OMAV, and the motto beneath.
+// Every place the brand appears uses this, at one of a few fixed sizes.
+const LOCKUP = {
+  nav: { w: 46, h: 33, word: 12.5, motto: 9.5, gap: 3 },
+  sm: { w: 52, h: 38, word: 13, motto: 10.5, gap: 4 },
+  md: { w: 64, h: 47, word: 15, motto: 12, gap: 5 },
+};
+
+export const OmavLockup: React.FC<{
+  size?: keyof typeof LOCKUP;
+  className?: string;
+  idPrefix?: string;
+}> = ({ size = 'sm', className = '', idPrefix = 'lockup' }) => {
+  const s = LOCKUP[size];
+  return (
+    <span className={`omav-lockup inline-flex flex-col items-center leading-none ${className}`}>
+      <OmavMark width={s.w} height={s.h} idPrefix={idPrefix} />
+      <span
+        className="font-jost text-ice tracking-[0.2em] pl-[0.2em]"
+        style={{ fontSize: s.word, marginTop: s.gap }}
+      >
+        OMAV
+      </span>
+      <span lang="sa" className="font-sanskrit text-ice/75 whitespace-nowrap" style={{ fontSize: s.motto, marginTop: s.gap }}>
+        ॥ अधिकाराणां कृते ॥
+      </span>
+    </span>
+  );
+};

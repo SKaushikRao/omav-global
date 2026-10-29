@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Cloud, Cpu, Database, Layers, Server, Smartphone } from 'lucide-react';
-import { Card, CtaBand, Mono, PageBackdrop, PageHero, Section } from '../components/page/PageParts';
+import { Bullet, Card, CtaBand, Mono, PageBackdrop, PageHero, Section } from '../components/page/PageParts';
 import Galaxy from '../components/ui/Galaxy';
 import RubberSegment from '../components/ui/RubberSegment';
 
@@ -220,14 +220,14 @@ export const SolutionsPage: React.FC<SolutionsPageProps> = ({ onRequestBriefing 
               <ul className="mt-6 space-y-2.5 text-[14px] text-ice/80">
                 {p.deliverables.map((d) => (
                   <li key={d} className="flex gap-3">
-                    <span className="mt-[9px] w-3 h-px bg-signal shrink-0" aria-hidden="true" />
+                    <Bullet />
                     {d}
                   </li>
                 ))}
               </ul>
               <div className="mt-auto pt-6">
                 <div className="pt-5 border-t border-hairline flex gap-3 text-[13.5px] leading-[1.5] text-ember">
-                  <span className="mt-[7px] w-1.5 h-1.5 rounded-full bg-ember shrink-0" aria-hidden="true" />
+                  <Bullet />
                   {p.impact}
                 </div>
               </div>
@@ -269,7 +269,7 @@ export const SolutionsPage: React.FC<SolutionsPageProps> = ({ onRequestBriefing 
                 <ul className="mt-6 pt-5 border-t border-hairline space-y-2.5 text-[14px] text-ice/80">
                   {phase.points.map((pt) => (
                     <li key={pt} className="flex gap-3">
-                      <span className="mt-[9px] w-3 h-px bg-signal shrink-0" aria-hidden="true" />
+                      <Bullet />
                       {pt}
                     </li>
                   ))}

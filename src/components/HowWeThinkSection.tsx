@@ -86,6 +86,17 @@ function Mark({ shape, tone }: Pick<KeyMark, 'shape' | 'tone'>) {
   return <span className="block w-2 h-2 rounded-full" style={{ background: c }} />;
 }
 
+// The cursor lights the glass from wherever it is over the card
+const lightGlass = (e: React.PointerEvent<HTMLDivElement>) => {
+  if (e.pointerType !== 'mouse') return;
+  const el = e.currentTarget;
+  const r = el.getBoundingClientRect();
+  el.style.setProperty('--mx', `${e.clientX - r.left}px`);
+  el.style.setProperty('--my', `${e.clientY - r.top}px`);
+  el.style.setProperty('--glow', '1');
+};
+const dimGlass = (e: React.PointerEvent<HTMLDivElement>) => e.currentTarget.style.setProperty('--glow', '0');
+
 export const HowWeThinkSection: React.FC<HowWeThinkSectionProps> = () => {
   return (
     <div className="relative">
@@ -120,7 +131,11 @@ export const HowWeThinkSection: React.FC<HowWeThinkSectionProps> = () => {
           className="omav-step min-h-[115vh] flex items-center max-lg:items-start max-lg:pt-[16vh]"
         >
           <div className="w-full max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-14">
-            <div className={`max-w-[520px] pointer-events-auto ${TEXT_RIGHT[i] ? 'lg:ml-auto' : ''}`}>
+            <div
+              onPointerMove={lightGlass}
+              onPointerLeave={dimGlass}
+              className={`omav-glass max-w-[540px] pointer-events-auto ${TEXT_RIGHT[i] ? 'lg:ml-auto' : ''}`}
+            >
               <div className="flex items-center gap-3 font-mono text-[12px]">
                 <span className="text-signal">0{i + 1}</span>
                 <span className="h-px flex-1 max-w-[120px] bg-hairline" aria-hidden="true" />
